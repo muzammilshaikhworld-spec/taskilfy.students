@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact — GAMMERSROOM</title>
+  <style>
+    :root{
+      --accent: #7ee7ff;
+      --accent-2: #9b8cff;
+      --white: rgba(255,255,255,0.95);
+      --muted: rgba(255,255,255,0.6);
+      --radius: 16px;
+      --container: 980px;
+      font-family: Inter, ui-sans-serif, system-ui;
+    }
+    body{
+      margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:36px;
+      background: radial-gradient(1200px 600px at 10% 20%, rgba(125,30,255,0.08), transparent 8%),
+                  radial-gradient(900px 500px at 85% 80%, rgba(10,200,255,0.06), transparent 12%),
+                  linear-gradient(180deg, rgba(3,3,10,1), rgba(12,12,30,1));
+      color:var(--white);
+    }
+    .blob{position:absolute; filter:blur(40px); opacity:0.55; mix-blend-mode:screen; pointer-events:none}
+    .blob.b1{width:360px;height:360px; left:-80px; top:-60px; background:linear-gradient(135deg,var(--accent),var(--accent-2));}
+    .blob.b2{width:300px;height:300px; right:-60px; bottom:-40px; background:linear-gradient(135deg,#ff8acb, #7ee7ff);}
+
+    .wrap{width:100%; max-width:var(--container); position:relative; z-index:2}
+    .card{
+      border-radius:calc(var(--radius) + 4px);
+      padding:28px; display:flex; gap:22px; align-items:stretch;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 10px 40px rgba(2,6,23,0.6);
+      backdrop-filter: blur(12px);
+    }
+    .left{flex:0 0 420px}
+    .right{flex:1; min-width:260px}
+    h1{font-size:28px;margin:0 0 6px 0}
+    .tag{font-size:13px;color:var(--muted); margin-bottom:18px}
+    .info{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px; padding:14px; border:1px solid rgba(255,255,255,0.03);
+      margin-bottom:12px
+    }
+    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+    .value{font-size:18px; color:var(--white); display:flex; gap:8px; align-items:center}
+    .btn{padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-weight:700; background:transparent; color:var(--white); text-decoration:none}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#04102a; border:none}
+    .btn.ghost{background:transparent; border:1px dashed rgba(255,255,255,0.06)}
+    .controls{display:flex; gap:10px; margin-top:12px}
+    .locked{padding:14px;border-radius:12px;border:1px dashed rgba(255,255,255,0.04); background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+    .hint{font-size:13px;color:var(--muted)}
+    .phoneWrap{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .pulse{animation:pulse 2.4s infinite ease-in-out}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+    footer{font-size:12px;color:var(--muted); margin-top:10px}
+    @media (max-width:900px){.card{flex-direction:column}.left{flex:unset}}
+  </style>
+</head>
+<body>
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+
+  <div class="wrap">
+    <div class="card" role="main">
+      <div class="left">
+        <h1>Get in Touch</h1>
+        <div class="tag">GAMMERSROOM — clean transparent UI. Share email or reveal WhatsApp after subscribing.</div>
+
+        <div class="info">
+          <label>Email</label>
+          <div class="value"><span id="email">muzammilshaikhworkld@gmail.com</span></div>
+          <div style="margin-top:10px" class="controls">
+            <a id="mailBtn" class="btn ghost" href="#">Send Email</a>
+            <button id="copyEmail" class="btn">Copy Email</button>
+          </div>
+        </div>
+
+        <div class="info locked" id="lockArea">
+          <label>Phone / WhatsApp</label>
+          <div class="hint">Subscribe to the YouTube channel then click "I've Subscribed" to reveal the number.</div>
+          <div style="margin-top:12px" class="controls">
+            <a id="ytLink" class="btn primary" href="https://www.youtube.com/@GAMMERSROOM" target="_blank" rel="noopener">Open Channel</a>
+            <button id="subBtn" class="btn">I've Subscribed</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div id="phoneCard" class="info" style="display:none">
+          <div class="phoneWrap">
+            <div>
+              <label>WhatsApp</label>
+              <div class="value"><span id="phone">8055490431</span> <small style="color:var(--muted); font-size:12px">(Click to chat)</small></div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center">
+              <a id="waBtn" class="btn primary" href="#" target="_blank" rel="noopener">Open WhatsApp</a>
+              <button id="copyPhone" class="btn">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="info">
+          <label>Quick actions</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px">
+            <a class="btn ghost" href="mailto:muzammilshaikhworkld@gmail.com">Email Now</a>
+            <a class="btn ghost" href="https://www.youtube.com/@GAMMERSROOM" target="_blank" rel="noopener">Visit Channel</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const emailEl = document.getElementById('email');
+    const mailBtn = document.getElementById('mailBtn');
+    const copyEmail = document.getElementById('copyEmail');
+    const subBtn = document.getElementById('subBtn');
+    const lockArea = document.getElementById('lockArea');
+    const phoneCard = document.getElementById('phoneCard');
+    const waBtn = document.getElementById('waBtn');
+    const copyPhone = document.getElementById('copyPhone');
+
+    mailBtn.addEventListener('click', ()=>{
+      window.location.href = 'mailto:' + emailEl.textContent.trim();
+    });
+    copyEmail.addEventListener('click', async ()=>{
+      try{ await navigator.clipboard.writeText(emailEl.textContent.trim()); alert('Email copied'); }catch(e){ prompt('Copy email', emailEl.textContent.trim()); }
+    });
+
+    subBtn.addEventListener('click', ()=>{
+      const ok = confirm('Click OK if you have subscribed to GAMMERSROOM.');
+      if(!ok) return;
+      lockArea.style.display = 'none';
+      phoneCard.style.display = 'block';
+      phoneCard.classList.add('pulse');
+      const raw = document.getElementById('phone').textContent.trim();
+      const intl = '+91' + raw;
+      waBtn.href = 'https://wa.me/' + encodeURIComponent(intl.replace(/\+/g, ''));
+    });
+
+    copyPhone.addEventListener('click', async ()=>{
+      const txt = document.getElementById('phone').textContent.trim();
+      try{ await navigator.clipboard.writeText(txt); alert('Phone copied'); }catch(e){ prompt('Phone', txt); }
+    });
+
+    document.getElementById('phone').parentElement.addEventListener('click', ()=>{
+      const raw = document.getElementById('phone').textContent.trim();
+      const intl = '+91' + raw;
+      window.open('https://wa.me/' + encodeURIComponent(intl.replace(/\+/g, '')),'_blank');
+    });
+  </script>
+</body>
+</html>

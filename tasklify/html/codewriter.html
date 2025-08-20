@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Red Hat Fenux - Web App Builder</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: monospace;
+      display: flex;
+      height: 100vh;
+      background: #1a0000;
+      color: #ff4d4d;
+    }
+    aside {
+      width: 250px;
+      background: #2a0000;
+      padding: 1rem;
+      border-right: 2px solid #900000;
+      overflow-y: auto;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+    textarea {
+      width: 100%;
+      height: 40%;
+      background: #000;
+      color: #ff4d4d;
+      border: 1px solid #990000;
+      padding: 1rem;
+      font-family: monospace;
+      resize: vertical;
+    }
+    iframe {
+      flex: 1;
+      border: 2px solid #990000;
+      margin-top: 1rem;
+      background: white;
+    }
+    button {
+      width: 100%;
+      background: #990000;
+      color: white;
+      border: none;
+      margin: 0.25rem 0;
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+    h2 { margin-top: 1.5rem; font-size: 1rem; color: #ff4d4d; }
+    select, input[type="text"] {
+      width: 100%;
+      margin: 0.25rem 0;
+      padding: 0.25rem;
+      background: #330000;
+      color: white;
+      border: 1px solid #990000;
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <button id="newPageBtn">➕ New Page</button>
+    <button id="saveBtn">💾 Save</button>
+    <button id="previewBtn">👁️ Preview</button>
+    <button id="liveToggleBtn">🔁 Toggle Live Preview</button>
+    <button id="exportBtn">📦 Export All</button>
+    <h2>Pages</h2>
+    <div id="pageList"></div>
+
+    <h2>Utilities</h2>
+    <button onclick="alert('Coming soon: HTML to APK')">📱 APK Converter</button>
+    <button onclick="alert('Coming soon: HTML to EXE')">💻 Software Converter</button>
+    <button onclick="alert('Coming soon: Export as PDF')">📄 Export to PDF</button>
+
+    <h2>Editor Options</h2>
+    <button onclick="editor.value = ''">🧹 Clear Editor</button>
+    <button onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+    <button onclick="pasteFromClipboard()">📥 Paste from Clipboard</button>
+    <button onclick="downloadCurrentFile()">⬇ Download Page</button>
+    <select id="themeSelect" onchange="switchTheme(this.value)">
+      <option value="dark">Dark Theme</option>
+      <option value="light">Light Theme</option>
+    </select>
+    <input type="text" id="fileRename" placeholder="Rename current page" onkeydown="if(event.key==='Enter') renamePage()">
+    <button onclick="renamePage()">✏️ Rename Page</button>
+  </aside>
+
+  <main>
+    <textarea id="editor" placeholder="Write your HTML here..."></textarea>
+    <iframe id="preview"></iframe>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script>
+    const editor = document.getElementById("editor");
+    const preview = document.getElementById("preview");
+    let pages = { "index.html": "" };
+    let currentPage = "index.html";
+    let autoPreview = false;
+
+    function renderPageList() {
+      const list = document.getElementById("pageList");
+      list.innerHTML = "";
+      Object.keys(pages).forEach((name) => {
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.onclick = () => loadPage(name);
+        list.appendChild(btn);
+      });
+    }
+
+    function createPage() {
+      const name = prompt("Enter new page name (e.g., about.html):");
+      if (!name || !name.endsWith(".html")) return alert("Must end with .html");
+      if (pages[name]) return alert("Page already exists!");
+      pages[name] = "";
+      currentPage = name;
+      editor.value = "";
+      renderPageList();
+    }
+
+    function savePage() {
+      pages[currentPage] = editor.value;
+      alert(`Saved ${currentPage}!`);
+    }
+
+    function loadPage(name) {
+      currentPage = name;
+      editor.value = pages[name];
+      if (autoPreview) previewPage();
+    }
+
+    function previewPage() {
+      const code = editor.value;
+      const blob = new Blob([code], { type: "text/html" });
+      preview.src = URL.createObjectURL(blob);
+    }
+
+    function toggleLivePreview() {
+      autoPreview = !autoPreview;
+      alert("Live preview " + (autoPreview ? "enabled" : "disabled"));
+      if (autoPreview) {
+        editor.addEventListener("input", previewPage);
+      } else {
+        editor.removeEventListener("input", previewPage);
+      }
+    }
+
+    function exportZip() {
+      const zip = new JSZip();
+      for (const name in pages) {
+        zip.file(name, pages[name]);
+      }
+      zip.generateAsync({ type: "blob" }).then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "red-hat-fenux-site.zip";
+        a.click();
+      });
+    }
+
+    function copyToClipboard() {
+      navigator.clipboard.writeText(editor.value).then(() => alert("Copied!"));
+    }
+
+    function pasteFromClipboard() {
+      navigator.clipboard.readText().then(text => editor.value += text);
+    }
+
+    function downloadCurrentFile() {
+      const blob = new Blob([editor.value], { type: "text/html" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = currentPage;
+      a.click();
+    }
+
+    function switchTheme(theme) {
+      if (theme === "light") {
+        document.body.style.background = "#fff";
+        document.body.style.color = "#000";
+        editor.style.background = "#f0f0f0";
+        editor.style.color = "#000";
+      } else {
+        document.body.style.background = "#1a0000";
+        document.body.style.color = "#ff4d4d";
+        editor.style.background = "#000";
+        editor.style.color = "#ff4d4d";
+      }
+    }
+
+    function renamePage() {
+      const newName = document.getElementById("fileRename").value.trim();
+      if (!newName || !newName.endsWith(".html")) return alert("Invalid file name");
+      if (pages[newName]) return alert("File name exists");
+      pages[newName] = pages[currentPage];
+      delete pages[currentPage];
+      currentPage = newName;
+      renderPageList();
+    }
+
+    document.getElementById("newPageBtn").onclick = createPage;
+    document.getElementById("saveBtn").onclick = savePage;
+    document.getElementById("previewBtn").onclick = previewPage;
+    document.getElementById("liveToggleBtn").onclick = toggleLivePreview;
+    document.getElementById("exportBtn").onclick = exportZip;
+
+    window.onload = () => {
+      renderPageList();
+      loadPage("index.html");
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Creator Info - Muzammil Shaikh</title>
+  <style>
+    body{
+      margin:0;
+      font-family:"Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:#0a0c14;
+      color:#f0f0f0;
+      line-height:1.6;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      min-height:100vh;
+      overflow-y:auto;
+      padding:40px 20px;
+    }
+    .container{
+      max-width:850px;
+      width:100%;
+      background:rgba(255,255,255,0.08);
+      padding:40px;
+      border-radius:20px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.7);
+      backdrop-filter: blur(12px);
+      border:1px solid rgba(255,255,255,0.18);
+      animation: fadeIn 1.2s ease;
+      position:relative;
+      z-index:2;
+      margin-bottom:60px;
+    }
+    h1{
+      color:#ffffff;
+      text-align:center;
+      margin-bottom:30px;
+      font-size:2.2rem;
+    }
+    h2{
+      color:#e0e0e0;
+      margin-bottom:8px;
+      font-size:1.3rem;
+    }
+    a{
+      color:#ffffff;
+      text-decoration:none;
+    }
+    a:hover{
+      text-decoration:underline;
+    }
+    .section{
+      margin-bottom:24px;
+      background:rgba(255,255,255,0.04);
+      padding:15px 20px;
+      border-radius:12px;
+      transition:transform 0.3s;
+    }
+    .section:hover{
+      transform:translateY(-4px);
+      background:rgba(255,255,255,0.1);
+    }
+    @keyframes fadeIn{
+      from{opacity:0; transform:translateY(20px);}
+      to{opacity:1; transform:translateY(0);}
+    }
+
+    /* Glassy floating animation background */
+    .glass-ball{
+      position:fixed;
+      border-radius:50%;
+      background:rgba(255,255,255,0.07);
+      backdrop-filter: blur(8px);
+      animation: float 12s infinite ease-in-out;
+      z-index:1;
+    }
+    .ball1{width:120px; height:120px; top:10%; left:15%; animation-delay:0s;}
+    .ball2{width:200px; height:200px; bottom:15%; right:10%; animation-delay:3s;}
+    .ball3{width:150px; height:150px; top:50%; right:25%; animation-delay:6s;}
+
+    @keyframes float{
+      0%,100%{ transform:translateY(0) translateX(0); }
+      50%{ transform:translateY(-40px) translateX(20px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="glass-ball ball1"></div>
+  <div class="glass-ball ball2"></div>
+  <div class="glass-ball ball3"></div>
+  
+  <div class="container">
+    <h1>Creator Information</h1>
+    <div class="section">
+      <h2>Name</h2>
+      <p>Muzammil Shaikh</p>
+    </div>
+    <div class="section">
+      <h2>Email</h2>
+      <p><a href="mailto:muzammilshaikhworld@gmail.com">muzammilshaikhworld@gmail.com</a></p>
+    </div>
+    <div class="section">
+      <h2>Status</h2>
+      <p>Student</p>
+    </div>
+    <div class="section">
+      <h2>Purpose of this Site</h2>
+      <p>This site is created only to help people and share useful tools. It is not intended to harm anyone.</p>
+    </div>
+    <div class="section">
+      <h2>Policy</h2>
+      <p>No use of bad or harmful things is allowed on this site. Any misuse is strictly prohibited.</p>
+    </div>
+    <div class="section">
+      <h2>Disclaimer</h2>
+      <p>All tools and resources on this site are provided for educational and helpful purposes only. The creator is not responsible for any misuse or damage caused by using them. Users are expected to act responsibly and ethically.</p>
+    </div>
+  </div>
+</body>
+</html>

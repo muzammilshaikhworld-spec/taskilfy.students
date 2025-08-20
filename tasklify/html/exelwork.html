@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Spreadsheet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --border-color: #e2e8f0;
+            --header-bg: #f8fafc;
+            --cell-selected-border: #2563eb;
+            --cell-selected-bg: #dbeafe;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        .grid-container {
+            grid-template-columns: 40px repeat(26, 120px);
+            grid-template-rows: 25px repeat(100, 25px);
+        }
+        .grid-cell, .col-header, .row-header {
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 2px 4px;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .col-header, .row-header {
+            background-color: var(--header-bg);
+            font-weight: 500;
+            position: sticky;
+            z-index: 10;
+        }
+        .col-header { top: 0; }
+        .row-header { left: 0; }
+        .top-left-corner {
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 20;
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .grid-cell:focus {
+            outline: 2px solid var(--cell-selected-border);
+            z-index: 5;
+            position: relative;
+        }
+        .grid-cell.selected {
+            border: 2px solid var(--cell-selected-border);
+            background-color: var(--cell-selected-bg);
+        }
+        .toolbar-btn.active {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col h-screen">
+
+    <!-- Toolbar -->
+    <div id="toolbar" class="bg-white p-2 shadow-md flex flex-wrap items-center gap-2 text-sm">
+        <!-- Styling Tools -->
+        <div class="flex items-center border rounded-md p-1">
+            <button id="bold-btn" class="toolbar-btn p-2 hover:bg-gray-200 rounded-md" title="Bold"><i class="fas fa-bold"></i></button>
+            <button id="italic-btn" class="toolbar-btn p-2 hover:bg-gray-200 rounded-md" title="Italic"><i class="fas fa-italic"></i></button>
+            <button id="underline-btn" class="toolbar-btn p-2 hover:bg-gray-200 rounded-md" title="Underline"><i class="fas fa-underline"></i></button>
+        </div>
+        <div class="flex items-center border rounded-md p-1">
+            <select id="font-family-select" class="p-2 border-none rounded-md hover:bg-gray-200 bg-transparent">
+                <option>Arial</option><option>Verdana</option><option>Times New Roman</option><option>Courier New</option><option>Georgia</option>
+            </select>
+        </div>
+        <div class="flex items-center border rounded-md p-1">
+            <select id="font-size-select" class="p-2 border-none rounded-md hover:bg-gray-200 bg-transparent">
+                <option>10</option><option>12</option><option selected>14</option><option>16</option><option>18</option><option>24</option>
+            </select>
+        </div>
+        <div class="flex items-center border rounded-md p-1">
+            <button id="align-left-btn" class="toolbar-btn p-2 hover:bg-gray-200 rounded-md" title="Align Left"><i class="fas fa-align-left"></i></button>
+            <button id="align-center-btn" class="toolbar-btn p-2 hover:bg-gray-200 rounded-md" title="Align Center"><i class="fas fa-align-center"></i></button>
+            <button id="align-right-btn" class="toolbar-btn p-2 hover:bg-gray-200 rounded-md" title="Align Right"><i class="fas fa-align-right"></i></button>
+        </div>
+        <div class="flex items-center border rounded-md p-1">
+            <div class="relative"><label for="text-color-input" class="p-2 hover:bg-gray-200 rounded-md cursor-pointer" title="Text Color"><i class="fas fa-font"></i></label><input type="color" id="text-color-input" class="absolute opacity-0 w-0 h-0"></div>
+            <div class="relative"><label for="bg-color-input" class="p-2 hover:bg-gray-200 rounded-md cursor-pointer" title="Background Color"><i class="fas fa-fill-drip"></i></label><input type="color" id="bg-color-input" class="absolute opacity-0 w-0 h-0"></div>
+        </div>
+        <!-- Invoice Template Button -->
+        <div class="flex items-center border rounded-md p-1">
+            <button id="invoice-btn" class="toolbar-btn p-2 hover:bg-gray-200 rounded-md" title="Load Invoice Template"><i class="fas fa-file-invoice-dollar"></i></button>
+        </div>
+        <!-- Formula Bar -->
+        <div class="flex items-center flex-grow">
+            <div class="bg-gray-200 text-gray-500 text-sm font-mono p-2 rounded-l-md" id="active-cell-indicator">A1</div>
+            <input type="text" id="formula-bar" class="p-2 w-full border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="f(x)">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-container" class="flex-grow overflow-auto relative">
+        <div class="grid grid-container" id="grid"></div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal-overlay hidden">
+        <div class="modal-box text-center">
+            <h3 class="text-lg font-bold mb-4">Confirm Action</h3>
+            <p class="mb-6">Loading a template will clear all current data. Are you sure you want to continue?</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-btn" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">Yes, Load</button>
+                <button id="cancel-btn" class="bg-gray-300 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-400">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const ROWS = 100;
+        const COLS = 26; // A-Z
+        const LOCAL_STORAGE_KEY = 'spreadsheet-state-v1';
+
+        // --- DOM ELEMENTS ---
+        const grid = document.getElementById('grid');
+        const formulaBar = document.getElementById('formula-bar');
+        const activeCellIndicator = document.getElementById('active-cell-indicator');
+        const mainContainer = document.getElementById('main-container');
+        const modal = document.getElementById('confirmation-modal');
+        const confirmBtn = document.getElementById('confirm-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const invoiceBtn = document.getElementById('invoice-btn');
+
+        // --- STATE MANAGEMENT ---
+        let state = {};
+        let activeCell = { row: 0, col: 0 };
+
+        // --- LOCAL STORAGE & STATE ---
+        const debounce = (func, delay) => {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        };
+
+        const saveStateToLocalStorage = debounce(() => {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+                console.log("State saved to Local Storage.");
+            } catch (error) {
+                console.error("Error saving state to Local Storage:", error);
+            }
+        }, 500);
+
+        function loadStateFromLocalStorage() {
+            const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedState) {
+                state = JSON.parse(savedState);
+                console.log("Loaded state from Local Storage.");
+            } else {
+                initializeEmptyState();
+                console.log("No saved state found, initialized empty sheet.");
+            }
+        }
+
+        function initializeEmptyState() {
+            state = {};
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const cellId = getCellId(row, col);
+                    state[cellId] = {
+                        value: '',
+                        formula: '',
+                        style: {
+                            fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none',
+                            textAlign: 'left', color: '#000000', backgroundColor: '#ffffff',
+                            fontFamily: 'Arial', fontSize: '14'
+                        }
+                    };
+                }
+            }
+        }
+        
+        // --- GRID & UI RENDERING ---
+        function createGrid() {
+            grid.innerHTML = '';
+            const corner = document.createElement('div');
+            corner.className = 'top-left-corner';
+            grid.appendChild(corner);
+
+            for (let col = 0; col < COLS; col++) {
+                const header = document.createElement('div');
+                header.className = 'col-header text-center';
+                header.textContent = String.fromCharCode(65 + col);
+                grid.appendChild(header);
+            }
+
+            for (let row = 0; row < ROWS; row++) {
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'row-header text-center';
+                rowHeader.textContent = row + 1;
+                grid.appendChild(rowHeader);
+                for (let col = 0; col < COLS; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.setAttribute('contenteditable', 'true');
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function renderFullSheet() {
+             for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const cellId = getCellId(row, col);
+                    const cellElement = getCellElement(row, col);
+                    const cellState = state[cellId] || {};
+                    updateCellDOM(cellElement, cellState);
+                }
+            }
+            evaluateAllFormulas();
+        }
+        
+        function updateCellDOM(cellElement, cellState) {
+            if (!cellElement || !cellState) return;
+            const displayValue = evaluateFormula(cellState.formula) ?? cellState.value;
+            if (cellElement.textContent !== displayValue) {
+                cellElement.textContent = displayValue;
+            }
+            if (cellState.style) {
+                Object.assign(cellElement.style, {
+                    fontWeight: cellState.style.fontWeight || 'normal',
+                    fontStyle: cellState.style.fontStyle || 'normal',
+                    textDecoration: cellState.style.textDecoration || 'none',
+                    textAlign: cellState.style.textAlign || 'left',
+                    color: cellState.style.color || '#000000',
+                    backgroundColor: cellState.style.backgroundColor || '#ffffff',
+                    fontFamily: cellState.style.fontFamily || 'Arial',
+                    fontSize: (cellState.style.fontSize || '14') + 'px',
+                });
+            }
+        }
+
+        // --- CELL UTILITIES ---
+        function getCellId(row, col) {
+            if (row < 0 || col < 0) return '';
+            return `${String.fromCharCode(65 + col)}${row + 1}`;
+        }
+        
+        function getCellCoords(cellId) {
+            const match = cellId.match(/^([A-Z]+)(\d+)$/i);
+            if (!match) return null;
+            const colName = match[1].toUpperCase();
+            const row = parseInt(match[2], 10) - 1;
+            let col = 0;
+            for (let i = 0; i < colName.length; i++) {
+                col = col * 26 + (colName.charCodeAt(i) - 65);
+            }
+            return { row, col };
+        }
+
+        function getCellElement(row, col) {
+            const index = (row + 1) * (COLS + 1) + (col + 1);
+            return grid.children[index];
+        }
+
+        // --- FORMULA ENGINE ---
+        function evaluateAllFormulas() {
+            Object.keys(state).forEach(cellId => {
+                if (state[cellId] && state[cellId].formula) {
+                    const coords = getCellCoords(cellId);
+                    if (coords) {
+                        const cellElement = getCellElement(coords.row, coords.col);
+                        updateCellDOM(cellElement, state[cellId]);
+                    }
+                }
+            });
+        }
+
+        function evaluateFormula(formula, visited = new Set()) {
+            if (!formula || !formula.startsWith('=')) return null;
+            const expr = formula.substring(1);
+            const processedExpr = expr.replace(/[A-Z]+\d+/gi, (match) => {
+                const upperMatch = match.toUpperCase();
+                if (visited.has(upperMatch)) return '#REF!';
+                visited.add(upperMatch);
+                const cellState = state[upperMatch];
+                if (!cellState) return '#NAME?';
+                if (cellState.formula) return evaluateFormula(cellState.formula, new Set(visited));
+                const value = parseFloat(cellState.value);
+                return isNaN(value) ? 0 : value;
+            });
+            try {
+                const finalExpr = processedExpr.replace(/#REF!|#NAME\?/g, 'NaN');
+                const result = new Function(`return ${finalExpr}`)();
+                if (isNaN(result) || !isFinite(result)) return '#ERROR!';
+                return String(result);
+            } catch (error) {
+                return '#ERROR!';
+            }
+        }
+        
+        function updateDependencies(changedCellId) {
+            Object.keys(state).forEach(cellId => {
+                const cellState = state[cellId];
+                if (cellState && cellState.formula && cellState.formula.toUpperCase().includes(changedCellId)) {
+                    const coords = getCellCoords(cellId);
+                    if (coords) {
+                       const cellElement = getCellElement(coords.row, coords.col);
+                       updateCellDOM(cellElement, cellState);
+                       updateDependencies(cellId);
+                    }
+                }
+            });
+        }
+
+        // --- EVENT HANDLERS ---
+        function handleCellFocus(e) {
+            const cell = e.target.closest('.grid-cell');
+            if (!cell) return;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            const prevActiveCellElem = getCellElement(activeCell.row, activeCell.col);
+            if (prevActiveCellElem) prevActiveCellElem.classList.remove('selected');
+            activeCell = { row, col };
+            cell.classList.add('selected');
+            updateActiveCellUI();
+        }
+        
+        function updateActiveCellUI() {
+            const cellId = getCellId(activeCell.row, activeCell.col);
+            const cellState = state[cellId];
+            if(!cellState) return;
+            activeCellIndicator.textContent = cellId;
+            formulaBar.value = cellState.formula || cellState.value || '';
+            document.getElementById('bold-btn').classList.toggle('active', cellState.style.fontWeight === 'bold');
+            document.getElementById('italic-btn').classList.toggle('active', cellState.style.fontStyle === 'italic');
+            document.getElementById('underline-btn').classList.toggle('active', cellState.style.textDecoration === 'underline');
+            document.getElementById('font-family-select').value = cellState.style.fontFamily;
+            document.getElementById('font-size-select').value = cellState.style.fontSize;
+            document.querySelectorAll('[id^="align-"]').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`align-${cellState.style.textAlign}-btn`).classList.add('active');
+        }
+
+        function handleCellInput(e) {
+            const cell = e.target;
+            const cellId = getCellId(parseInt(cell.dataset.row), parseInt(cell.dataset.col));
+            const text = cell.textContent || '';
+            if (text.startsWith('=')) {
+                state[cellId].formula = text;
+                state[cellId].value = '';
+            } else {
+                state[cellId].formula = '';
+                state[cellId].value = text;
+            }
+            formulaBar.value = text;
+            updateDependencies(cellId.toUpperCase());
+            evaluateAllFormulas();
+            saveStateToLocalStorage();
+        }
+        
+        function handleFormulaBarInput(e) {
+            const text = e.target.value;
+            const cellId = getCellId(activeCell.row, activeCell.col);
+            const cellElement = getCellElement(activeCell.row, activeCell.col);
+            if (text.startsWith('=')) {
+                state[cellId].formula = text;
+                state[cellId].value = '';
+            } else {
+                state[cellId].formula = '';
+                state[cellId].value = text;
+            }
+            updateCellDOM(cellElement, state[cellId]);
+            updateDependencies(cellId.toUpperCase());
+            evaluateAllFormulas();
+            saveStateToLocalStorage();
+        }
+
+        function handleToolbarAction(e) {
+            const button = e.target.closest('button, select, input');
+            if (!button) return;
+            const cellId = getCellId(activeCell.row, activeCell.col);
+            const cellState = state[cellId];
+            if (!cellState) return;
+            let styleProp, styleValue;
+            switch(button.id) {
+                case 'bold-btn': styleProp = 'fontWeight'; styleValue = cellState.style.fontWeight === 'bold' ? 'normal' : 'bold'; break;
+                case 'italic-btn': styleProp = 'fontStyle'; styleValue = cellState.style.fontStyle === 'italic' ? 'normal' : 'italic'; break;
+                case 'underline-btn': styleProp = 'textDecoration'; styleValue = cellState.style.textDecoration === 'underline' ? 'none' : 'underline'; break;
+                case 'font-family-select': styleProp = 'fontFamily'; styleValue = button.value; break;
+                case 'font-size-select': styleProp = 'fontSize'; styleValue = button.value; break;
+                case 'align-left-btn': styleProp = 'textAlign'; styleValue = 'left'; break;
+                case 'align-center-btn': styleProp = 'textAlign'; styleValue = 'center'; break;
+                case 'align-right-btn': styleProp = 'textAlign'; styleValue = 'right'; break;
+                case 'text-color-input': styleProp = 'color'; styleValue = button.value; break;
+                case 'bg-color-input': styleProp = 'backgroundColor'; styleValue = button.value; break;
+            }
+            if (styleProp) {
+                cellState.style[styleProp] = styleValue;
+                const cellElement = getCellElement(activeCell.row, activeCell.col);
+                updateCellDOM(cellElement, cellState);
+                updateActiveCellUI();
+                saveStateToLocalStorage();
+            }
+        }
+
+        // --- INVOICE & MODAL LOGIC ---
+        function showModal() { modal.classList.remove('hidden'); }
+        function hideModal() { modal.classList.add('hidden'); }
+
+        function loadInvoiceTemplate() {
+            hideModal();
+            initializeEmptyState(); // Clear the sheet
+            const today = new Date().toLocaleDateString();
+
+            // A helper to update a cell's state
+            const updateCell = (cellId, value, formula, style = {}) => {
+                const defaultStyle = state[cellId].style;
+                state[cellId] = { value, formula, style: {...defaultStyle, ...style } };
+            };
+            
+            // Populate invoice data
+            updateCell('A1', 'YOUR COMPANY', '', { fontWeight: 'bold', fontSize: '18' });
+            updateCell('A2', '123 Main Street, Anytown', '', { fontSize: '10' });
+            updateCell('E1', 'INVOICE', '', { fontWeight: 'bold', fontSize: '24', textAlign: 'right' });
+            updateCell('D3', 'Invoice #', '', { textAlign: 'right', fontWeight: 'bold' });
+            updateCell('E3', '1001', '');
+            updateCell('D4', 'Date', '', { textAlign: 'right', fontWeight: 'bold' });
+            updateCell('E4', today, '');
+
+            updateCell('A6', 'BILL TO:', '', { fontWeight: 'bold' });
+            updateCell('A7', 'Client Name', '');
+            updateCell('A8', 'Client Address', '');
+
+            const headerStyle = { fontWeight: 'bold', backgroundColor: '#f3f4f6' };
+            updateCell('A10', 'Item Description', '', headerStyle);
+            updateCell('C10', 'Qty', '', {...headerStyle, textAlign: 'center'});
+            updateCell('D10', 'Unit Price', '', {...headerStyle, textAlign: 'right'});
+            updateCell('E10', 'Total', '', {...headerStyle, textAlign: 'right'});
+            
+            // Item rows
+            for(let i=11; i < 16; i++) {
+                updateCell(`E${i}`, '', `=C${i}*D${i}`, {textAlign: 'right'});
+            }
+            
+            updateCell('D16', 'Subtotal', '', { fontWeight: 'bold', textAlign: 'right' });
+            updateCell('E16', '', '=E11+E12+E13+E14+E15', { fontWeight: 'bold', textAlign: 'right' });
+            updateCell('D17', 'Tax (5%)', '', { textAlign: 'right' });
+            updateCell('E17', '', '=E16*0.05', { textAlign: 'right' });
+            updateCell('D18', 'TOTAL', '', { fontWeight: 'bold', textAlign: 'right' });
+            updateCell('E18', '', '=E16+E17', { fontWeight: 'bold', backgroundColor: '#dbeafe', textAlign: 'right' });
+
+            renderFullSheet();
+            saveStateToLocalStorage();
+        }
+        
+        // --- EVENT LISTENERS ---
+        grid.addEventListener('focusin', handleCellFocus);
+        grid.addEventListener('input', handleCellInput);
+        formulaBar.addEventListener('input', handleFormulaBarInput);
+        formulaBar.addEventListener('keydown', (e) => {
+             if (e.key === 'Enter') {
+                e.preventDefault();
+                getCellElement(activeCell.row, activeCell.col).focus();
+            }
+        });
+        document.getElementById('toolbar').addEventListener('click', handleToolbarAction);
+        document.getElementById('toolbar').addEventListener('change', handleToolbarAction);
+        invoiceBtn.addEventListener('click', showModal);
+        confirmBtn.addEventListener('click', loadInvoiceTemplate);
+        cancelBtn.addEventListener('click', hideModal);
+
+        // --- MAIN EXECUTION ---
+        window.onload = function() {
+            createGrid();
+            loadStateFromLocalStorage();
+            renderFullSheet();
+            updateActiveCellUI();
+        };
+    </script>
+</body>
+</html>

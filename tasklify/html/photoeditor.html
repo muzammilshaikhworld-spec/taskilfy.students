@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Photoshop-lite — HTML/CSS/JS Photo Editor (Pro Lite)</title>
+  <style>
+    :root{--bg:#0f1724;--panel:#0b1220;--accent:#06b6d4;--muted:#9aa5b1;--card:#0b1220}
+    *{box-sizing:border-box;font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    html,body{height:100%}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071021 0%, #071726 100%);color:#e6eef6}
+    header{padding:14px 18px;display:flex;align-items:center;gap:12px}
+    header h1{font-size:18px;margin:0}
+    header .right{margin-left:auto;color:var(--muted);font-size:13px}
+
+    /* layout */
+    .app{display:grid;grid-template-columns:320px 1fr 300px;gap:14px;padding:12px}
+    .panel{background:var(--panel);border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(2,6,23,.6);overflow:hidden}
+
+    /* LEFT - Layers */
+    .layers{max-height:56vh;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
+    .layer{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border:1px solid rgba(255,255,255,0.03)}
+    .layer img{width:46px;height:32px;object-fit:cover;border-radius:4px}
+    .controls{display:flex;gap:8px;margin-top:8px}
+    button, input[type=file], select{background:none;border:1px solid rgba(255,255,255,0.06);color:inherit;padding:8px 10px;border-radius:8px;cursor:pointer}
+    button.primary{background:linear-gradient(90deg,var(--accent),#7c3aed);border:none}
+
+    /* CENTER - Canvas */
+    .canvas-wrap{background:#071327;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:64vh}
+    .stage{position:relative;border-radius:8px;background:#081423}
+    canvas{display:block;border-radius:6px;max-width:100%;height:auto;background:linear-gradient(180deg,#02121b,#041727)}
+    .tool-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+
+    /* RIGHT - Properties / Tools */
+    .right .group{margin-bottom:12px}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    input[type=range]{width:100%}
+    .footer{padding:12px;color:var(--muted);font-size:13px}
+
+    /* Responsive */
+    @media (max-width:1000px){.app{grid-template-columns:1fr;}.panel{max-height:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Photoshop-lite — Pro Lite</h1>
+    <div class="right">Responsive · Layers · Retouch · AI-sim · Brushes · Text · Export</div>
+  </header>
+
+  <main class="app">
+    <!-- LEFT PANEL -->
+    <section class="panel left" id="leftPanel">
+      <div style="font-weight:700;color:var(--muted);margin-bottom:8px">Layers</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="fileIn" type="file" accept="image/*" multiple />
+        <button id="addBlank">+ Blank</button>
+      </div>
+      <div class="layers" id="layersList"></div>
+      <div class="controls" style="margin-top:8px">
+        <button id="layerUp">Move Up</button>
+        <button id="layerDown">Move Down</button>
+        <button id="delLayer">Delete</button>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-weight:700;color:var(--muted);margin-bottom:8px">Selection / Mask</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="rectSel">Rect Select</button>
+          <button id="lassoSel">Free Sel</button>
+          <button id="applyMask">Apply Mask</button>
+          <button id="invertMask">Invert Mask</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER CANVAS -->
+    <section class="panel canvas-wrap">
+      <div class="stage">
+        <canvas id="mainCanvas" width="1200" height="700"></canvas>
+      </div>
+      <div class="tool-row" style="margin-top:12px">
+        <button id="selectTool">Select</button>
+        <button id="brushTool">Brush</button>
+        <button id="eraseTool">Erase</button>
+        <button id="cloneTool">Clone</button>
+        <button id="healTool">Heal</button>
+        <button id="shapeRect">Rect</button>
+        <button id="textTool">Text</button>
+        <button id="genFill">Generative Fill (simulate)</button>
+        <button id="exportPNG" class="primary">Export PNG</button>
+      </div>
+      <div style="width:92%;margin-top:12px">
+        <div style="font-weight:700;color:var(--muted)">Quick Instructions</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:6px">Upload images → they become layers. Select a layer then choose a tool. Use Rect Select for crops/masks. Brush/Erase draw on paint layers. Clone: Alt+click to sample, then paint. Heal: removes blemishes by sampling nearby pixels. Generative Fill simulates content fill.</div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <aside class="panel right">
+      <div class="group">
+        <div style="font-weight:700;color:var(--muted);">Layer Properties</div>
+        <div style="margin-top:8px"><label>Selected Layer</label><div id="selName" style="font-weight:600">— none —</div></div>
+        <div style="margin-top:8px"><label>Opacity <span id="opVal">100%</span></label><input id="opacity" type="range" min="0" max="100" value="100"></div>
+      </div>
+
+      <div class="group">
+        <div style="font-weight:700;color:var(--muted);">Adjustments</div>
+        <label>Brightness <span id="bVal">0</span></label><input id="brightness" type="range" min="-200" max="200" value="0">
+        <label>Contrast <span id="cVal">0</span></label><input id="contrast" type="range" min="-200" max="200" value="0">
+        <label>Saturation <span id="sVal">0</span></label><input id="saturation" type="range" min="-100" max="200" value="0">
+        <label>Hue <span id="hVal">0°</span></label><input id="hue" type="range" min="-180" max="180" value="0">
+        <div style="margin-top:8px;display:flex;gap:8px"><button id="blurBtn">Blur</button><button id="sharpenBtn">Sharpen</button></div>
+      </div>
+
+      <div class="group">
+        <div style="font-weight:700;color:var(--muted);">Brush / Clone</div>
+        <label>Size <span id="sizeVal">30</span></label><input id="brushSize" type="range" min="1" max="200" value="30">
+        <label>Hardness</label><input id="brushHard" type="range" min="0" max="100" value="80">
+        <div style="margin-top:8px"><button id="undoBtn">Undo</button><button id="redoBtn">Redo</button></div>
+      </div>
+
+      <div class="group">
+        <div style="font-weight:700;color:var(--muted);">Export / File</div>
+        <div style="display:flex;gap:8px;margin-top:8px"><button id="flatten">Flatten</button><button id="clearAll">Clear All</button></div>
+      </div>
+
+      <div style="font-size:12px;color:var(--muted);margin-top:12px">Pro Lite: This is a JavaScript-only, in-browser approximation of core Photoshop features — lightweight and privacy-first. Advanced features (real AI, RAW processing, cloud sync, plugins) require backend/OS-level code and are out of scope for this single-file demo.</div>
+    </aside>
+  </main>
+
+  <div class="footer">Built with canvas — no external libraries. Works offline in the browser.</div>
+
+  <script>
+    // === Model ===
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    let layers = []; // {id,name,type:image|paint|text, img/canvas/text, x,y,w,h,opacity,filters,visible,mask}
+    let selectedLayerId = null;
+    let tool = 'select';
+    let isDown=false, startX=0, startY=0, selRect=null;
+    let brushSize=30, brushHard=0.8, undoStack=[], redoStack=[];
+    let cloneSample=null; // {x,y,layerId}
+
+    // Helpers
+    function uid(){return Math.random().toString(36).slice(2,9)}
+    function getLayer(id){return layers.find(l=>l.id===id)}
+
+    // Render loop
+    function render(){
+      // clear
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // background
+      ctx.fillStyle='#06121a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      // draw layers
+      for(const l of layers){
+        if(!l.visible) continue;
+        ctx.save();
+        ctx.globalAlpha = l.opacity===undefined?1:l.opacity;
+        // filters
+        const f=[];
+        if(l.filters){ if(l.filters.b) f.push(`brightness(${1 + l.filters.b/100})`); if(l.filters.c) f.push(`contrast(${1 + l.filters.c/100})`); if(l.filters.s) f.push(`saturate(${1 + l.filters.s/100})`); if(l.filters.h) f.push(`hue-rotate(${l.filters.h}deg)`); }
+        ctx.filter = f.join(' ') || 'none';
+
+        if(l.type==='image' && l.img){ ctx.drawImage(l.img, l.x, l.y, l.w, l.h); }
+        if(l.type==='paint' && l.canvas){ ctx.drawImage(l.canvas, l.x, l.y); }
+        if(l.type==='text'){ ctx.font = l.font || '40px sans-serif'; ctx.fillStyle = l.color || '#fff'; ctx.fillText(l.text, l.x, l.y); }
+
+        // draw mask if present (visual only)
+        if(l.mask){ ctx.globalCompositeOperation='multiply'; ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill(l.mask); ctx.globalCompositeOperation='source-over'; }
+        ctx.restore();
+      }
+
+      // draw selection
+      if(selRect){ ctx.save(); ctx.strokeStyle='rgba(6,182,212,0.9)'; ctx.lineWidth=2; ctx.setLineDash([6,6]); ctx.strokeRect(selRect.x,selRect.y,selRect.w,selRect.h); ctx.restore(); }
+
+      refreshLayerList();
+    }
+
+    // Layer UI
+    const layersList = document.getElementById('layersList');
+    function refreshLayerList(){
+      layersList.innerHTML='';
+      for(let i=layers.length-1;i>=0;i--){
+        const l=layers[i];
+        const div = document.createElement('div'); div.className='layer';
+        div.dataset.id = l.id;
+        const thumb = document.createElement('img'); thumb.alt='thumb';
+        const tcanvas = document.createElement('canvas'); tcanvas.width=160; tcanvas.height=100; const tctx=tcanvas.getContext('2d');
+        if(l.type==='image' && l.img){ tctx.drawImage(l.img,0,0,tcanvas.width,tcanvas.height); thumb.src=tcanvas.toDataURL(); }
+        else if(l.type==='paint' && l.canvas){ tctx.drawImage(l.canvas,0,0,tcanvas.width,tcanvas.height); thumb.src=tcanvas.toDataURL(); }
+        else thumb.src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100"></svg>';
+        const meta = document.createElement('div'); meta.style.flex='1';
+        const name = document.createElement('div'); name.textContent = l.name || 'Layer';
+        const small = document.createElement('small'); small.textContent = `${l.type} · ${Math.round((l.opacity||1)*100)}%`;
+        meta.appendChild(name); meta.appendChild(small);
+        div.appendChild(thumb); div.appendChild(meta);
+        div.addEventListener('click',()=>{ selectLayer(l.id); });
+        layersList.appendChild(div);
+      }
+      updatePropertiesUI();
+    }
+
+    // Add image layer
+    function addImageLayer(img){
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height, 1);
+      const iw = img.width * scale, ih = img.height * scale;
+      const l = {id:uid(),name:'Image Layer',type:'image',img:img,opacity:1,filters:{b:0,c:0,s:0,h:0},x:(canvas.width-iw)/2,y:(canvas.height-ih)/2,w:iw,h:ih,visible:true};
+      layers.push(l); selectedLayerId = l.id; pushUndo(); render();
+    }
+
+    function addBlankLayer(){
+      const c = document.createElement('canvas'); c.width=canvas.width; c.height=canvas.height; const cc=c.getContext('2d'); cc.clearRect(0,0,c.width,c.height);
+      const l = {id:uid(),name:'Paint Layer',type:'paint',canvas:c,opacity:1,filters:{b:0,c:0,s:0,h:0},x:0,y:0,w:c.width,h:c.height,visible:true}; layers.push(l); selectedLayerId=l.id; pushUndo(); render();
+    }
+
+    function selectLayer(id){ selectedLayerId = id; const l=getLayer(id); document.getElementById('selName').textContent = l? l.name:'— none —'; updatePropertiesUI(); render(); }
+
+    function updatePropertiesUI(){ const l=getLayer(selectedLayerId); if(!l){document.getElementById('selName').textContent='— none —';return} document.getElementById('opacity').value = Math.round((l.opacity||1)*100); document.getElementById('opVal').textContent = Math.round((l.opacity||1)*100)+'%';
+      document.getElementById('bVal').textContent = (l.filters.b||0); document.getElementById('cVal').textContent = (l.filters.c||0); document.getElementById('sVal').textContent = (l.filters.s||0); document.getElementById('hVal').textContent = (l.filters.h||0)+'°'; }
+
+    // File input
+    document.getElementById('fileIn').addEventListener('change',async(e)=>{
+      const files = Array.from(e.target.files);
+      for(const f of files){ const url = URL.createObjectURL(f); const img = new Image(); img.onload = ()=>{ addImageLayer(img); URL.revokeObjectURL(url); }; img.src = url; }
+    });
+    document.getElementById('addBlank').addEventListener('click',addBlankLayer);
+
+    // Layer controls
+    document.getElementById('layerUp').addEventListener('click',()=>{ const idx = layers.findIndex(x=>x.id===selectedLayerId); if(idx<=0) return; const temp=layers[idx]; layers.splice(idx,1); layers.splice(idx-1,0,temp); pushUndo(); render(); });
+    document.getElementById('layerDown').addEventListener('click',()=>{ const idx = layers.findIndex(x=>x.id===selectedLayerId); if(idx<0||idx===layers.length-1) return; const temp=layers[idx]; layers.splice(idx,1); layers.splice(idx+1,0,temp); pushUndo(); render(); });
+    document.getElementById('delLayer').addEventListener('click',()=>{ const idx = layers.findIndex(x=>x.id===selectedLayerId); if(idx<0) return; layers.splice(idx,1); selectedLayerId = layers.length? layers[layers.length-1].id : null; pushUndo(); render(); });
+
+    // Properties controls
+    document.getElementById('opacity').addEventListener('input',e=>{ const l=getLayer(selectedLayerId); if(!l) return; l.opacity = e.target.value/100; document.getElementById('opVal').textContent = e.target.value+'%'; pushUndo(); render(); });
+    document.getElementById('brightness').addEventListener('input',e=>{ const l=getLayer(selectedLayerId); if(!l) return; l.filters.b = Number(e.target.value); document.getElementById('bVal').textContent = e.target.value; render(); });
+    document.getElementById('contrast').addEventListener('input',e=>{ const l=getLayer(selectedLayerId); if(!l) return; l.filters.c = Number(e.target.value); document.getElementById('cVal').textContent = e.target.value; render(); });
+    document.getElementById('saturation').addEventListener('input',e=>{ const l=getLayer(selectedLayerId); if(!l) return; l.filters.s = Number(e.target.value); document.getElementById('sVal').textContent = e.target.value; render(); });
+    document.getElementById('hue').addEventListener('input',e=>{ const l=getLayer(selectedLayerId); if(!l) return; l.filters.h = Number(e.target.value); document.getElementById('hVal').textContent = e.target.value + '°'; render(); });
+
+    // Resize canvas helper
+    function ensureCanvasSize(){ if(canvas.width===0) { canvas.width = 1200; canvas.height = 700; }}
+
+    // Export
+    document.getElementById('exportPNG').addEventListener('click',()=>{ const data = canvas.toDataURL('image/png'); const a=document.createElement('a'); a.href=data; a.download='ps-lite-export.png'; a.click(); });
+
+    // Flatten and clear
+    document.getElementById('flatten').addEventListener('click',()=>{ const data = canvas.toDataURL(); const im = new Image(); im.onload=()=>{ layers = [{id:uid(),name:'Flattened',type:'image',img:im,opacity:1,filters:{b:0,c:0,s:0,h:0},x:0,y:0,w:canvas.width,h:canvas.height,visible:true}]; selectedLayerId = layers[0].id; pushUndo(); render(); }; im.src=data; });
+    document.getElementById('clearAll').addEventListener('click',()=>{ if(confirm('Clear all layers?')){ layers=[]; selectedLayerId=null; pushUndo(); render(); } });
+
+    // Tools selection
+    document.getElementById('selectTool').addEventListener('click',()=>{ tool='select'; });
+    document.getElementById('brushTool').addEventListener('click',()=>{ tool='paint'; });
+    document.getElementById('eraseTool').addEventListener('click',()=>{ tool='erase'; });
+    document.getElementById('cloneTool').addEventListener('click',()=>{ tool='clone'; });
+    document.getElementById('healTool').addEventListener('click',()=>{ tool='heal'; });
+    document.getElementById('textTool').addEventListener('click',()=>{ tool='text'; });
+    document.getElementById('shapeRect').addEventListener('click',()=>{ tool='rect'; });
+
+    // Generative fill simulate
+    document.getElementById('genFill').addEventListener('click',()=>{
+      if(!selRect){ alert('Make a rectangular selection first (Select tool)'); return; }
+      const px = Math.max(0, selRect.x-10), py=Math.max(0, selRect.y-10);
+      const w = Math.min(canvas.width-px, selRect.w+20), h = Math.min(canvas.height-py, selRect.h+20);
+      const data = ctx.getImageData(px,py,w,h).data; let r=0,g=0,b=0,count=0;
+      for(let i=0;i<data.length;i+=4){ r+=data[i]; g+=data[i+1]; b+=data[i+2]; count++; }
+      r=Math.round(r/count); g=Math.round(g/count); b=Math.round(b/count);
+      let l = getLayer(selectedLayerId);
+      if(!l || l.type!=='paint'){ addBlankLayer(); l = getLayer(selectedLayerId); }
+      const pctx = l.canvas.getContext('2d'); pctx.fillStyle = `rgba(${r},${g},${b},1)`; pctx.fillRect(selRect.x,selRect.y,selRect.w,selRect.h); selRect=null; pushUndo(); render();
+    });
+
+    // Brush settings
+    document.getElementById('brushSize').addEventListener('input',e=>{ brushSize = Number(e.target.value); document.getElementById('sizeVal').textContent = brushSize; });
+    document.getElementById('brushHard').addEventListener('input',e=>{ brushHard = Number(e.target.value)/100; });
+
+    // Undo/Redo (simple snapshot)
+    function snapshot(){ return JSON.stringify(layers.map(l=>{ if(l.type==='image') return {id:l.id,name:l.name,type:l.type,src:l.img.src,x:l.x,y:l.y,w:l.w,h:l.h,opacity:l.opacity,filters:l.filters,visible:l.visible}; if(l.type==='paint') return {id:l.id,name:l.name,type:l.type,src:l.canvas.toDataURL(),x:l.x,y:l.y,w:l.w,h:l.h,opacity:l.opacity,filters:l.filters,visible:l.visible}; return l; })); }
+    function restoreSnapshot(s){ const arr = JSON.parse(s); layers = arr.map(a=>{ if(a.type==='image'){ const im = new Image(); im.src = a.src; return {id:a.id,name:a.name,type:'image',img:im,x:a.x,y:a.y,w:a.w,h:a.h,opacity:a.opacity,filters:a.filters,visible:a.visible}; } if(a.type==='paint'){ const c = document.createElement('canvas'); const imgt = new Image(); imgt.onload = ()=>{ const cctx=c.getContext('2d'); c.width = imgt.width; c.height=imgt.height; cctx.drawImage(imgt,0,0); render(); }; imgt.src = a.src; return {id:a.id,name:a.name,type:'paint',canvas:c,x:a.x,y:a.y,w:a.w,h:a.h,opacity:a.opacity,filters:a.filters,visible:a.visible}; } return a; }); selectedLayerId = layers.length? layers[layers.length-1].id : null; }
+    function pushUndo(){ undoStack.push(snapshot()); if(undoStack.length>50) undoStack.shift(); redoStack=[]; }
+    document.getElementById('undoBtn').addEventListener('click',()=>{ if(undoStack.length===0) return; redoStack.push(snapshot()); const s = undoStack.pop(); restoreSnapshot(s); render(); });
+    document.getElementById('redoBtn').addEventListener('click',()=>{ if(redoStack.length===0) return; undoStack.push(snapshot()); const s = redoStack.pop(); restoreSnapshot(s); render(); });
+
+    // Simple blur and sharpen
+    document.getElementById('blurBtn').addEventListener('click',()=>{ ctx.filter='blur(4px)'; const data=ctx.getImageData(0,0,canvas.width,canvas.height); ctx.putImageData(data,0,0); ctx.filter='none'; pushUndo(); });
+    document.getElementById('sharpenBtn').addEventListener('click',()=>{ // crude sharpen via convolution
+      const imgd = ctx.getImageData(0,0,canvas.width,canvas.height); const d=imgd.data; const w=imgd.width; const h=imgd.height; const out=new Uint8ClampedArray(d.length);
+      const kernel=[0,-1,0,-1,5,-1,0,-1,0]; let ki=0;
+      for(let y=1;y<h-1;y++){ for(let x=1;x<w-1;x++){ for(let c=0;c<3;c++){ let v=0; ki=0; for(let ky=-1;ky<=1;ky++){ for(let kx=-1;kx<=1;kx++){ const px=(x+kx)+(y+ky)*w; v+=d[px*4 + c]*kernel[ki++]; }} out[(x+y*w)*4 + c] = Math.min(255,Math.max(0,v)); } out[(x+y*w)*4 +3]=255; }} imgd.data.set(out); ctx.putImageData(imgd,0,0); pushUndo(); });
+
+    // Canvas mouse events - unified
+    canvas.addEventListener('mousedown',e=>{ isDown=true; const r=canvas.getBoundingClientRect(); startX = Math.round((e.clientX - r.left) * (canvas.width / r.width)); startY = Math.round((e.clientY - r.top) * (canvas.height / r.height));
+      if(tool==='paint' || tool==='erase' || tool==='clone' || tool==='heal'){
+        const l = getLayer(selectedLayerId); if(!l || l.type!=='paint'){ addBlankLayer(); }
+        if(tool==='clone' && (e.altKey || e.button===2)){
+          // sample point
+          cloneSample = {x:startX,y:startY,layerId:selectedLayerId};
+        }
+        if(tool==='text'){
+          const text = prompt('Enter text'); if(text){ const l=getLayer(selectedLayerId); const fontSize = 40; const t = {id:uid(),name:'Text',type:'text',text:text,x:startX,y:startY,font:`${fontSize}px sans-serif`,color:'#fff',opacity:1,visible:true}; layers.push(t); pushUndo(); render(); }
+        }
+      }
+
+      if(tool==='select'){ selRect={x:startX,y:startY,w:0,h:0}; }
+    });
+
+    canvas.addEventListener('mousemove',e=>{ if(!isDown) return; const r=canvas.getBoundingClientRect(); const mx = Math.round((e.clientX - r.left) * (canvas.width / r.width)); const my = Math.round((e.clientY - r.top) * (canvas.height / r.height));
+      if(tool==='select'){ selRect = {x: Math.min(startX,mx), y: Math.min(startY,my), w: Math.abs(mx-startX), h: Math.abs(my-startY)}; render(); }
+
+      if(tool==='paint' || tool==='erase' || tool==='clone' || tool==='heal'){
+        const l = getLayer(selectedLayerId); if(!l || l.type!=='paint') return; const pctx = l.canvas.getContext('2d');
+        pctx.save();
+        if(tool==='erase'){ pctx.globalCompositeOperation='destination-out'; pctx.beginPath(); pctx.arc(mx,my,brushSize/2,0,Math.PI*2); pctx.fill(); }
+        else if(tool==='paint'){ pctx.globalCompositeOperation='source-over'; const g = pctx.createRadialGradient(mx,my,brushSize*brushHard, mx,my,brushSize); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(1,'rgba(255,255,255,0)'); pctx.fillStyle=g; pctx.beginPath(); pctx.arc(mx,my,brushSize,0,Math.PI*2); pctx.fill(); }
+        else if(tool==='clone' && cloneSample){ // draw from sample
+          const sx=cloneSample.x, sy=cloneSample.y; pctx.globalCompositeOperation='source-over'; pctx.drawImage(canvas, sx, sy, brushSize, brushSize, mx-brushSize/2, my-brushSize/2, brushSize, brushSize);
+        }
+        else if(tool==='heal'){ // simple heal: sample surrounding avg color and paint
+          const px=Math.max(0,mx-5), py=Math.max(0,my-5); const w=10,h=10; try{ const d=ctx.getImageData(px,py,w,h).data; let r=0,g=0,b=0,c=0; for(let i=0;i<d.length;i+=4){ r+=d[i];g+=d[i+1];b+=d[i+2];c++; } r=Math.round(r/c);g=Math.round(g/c);b=Math.round(b/c); pctx.globalCompositeOperation='source-over'; pctx.fillStyle=`rgba(${r},${g},${b},1)`; pctx.beginPath(); pctx.arc(mx,my,brushSize/2,0,Math.PI*2); pctx.fill(); }catch(err){}
+        }
+        pctx.restore(); render();
+      }
+    });
+
+    canvas.addEventListener('mouseup',e=>{ isDown=false; if(tool==='select'){ /* selection stays until action */ } pushUndo(); });
+    canvas.addEventListener('mouseleave',()=>{ isDown=false });
+
+    // Apply mask / selection actions
+    document.getElementById('applyMask').addEventListener('click',()=>{ if(!selRect) return; const l=getLayer(selectedLayerId); if(!l) return; // create mask path
+      const p = new Path2D(); p.rect(selRect.x,selRect.y,selRect.w,selRect.h); l.mask = p; selRect=null; pushUndo(); render(); });
+    document.getElementById('invertMask').addEventListener('click',()=>{ const l=getLayer(selectedLayerId); if(!l || !l.mask) return; // naive invert by toggling visible
+      l.visible = !l.visible; pushUndo(); render(); });
+
+    // Rect select / lasso (simple freehand)
+    document.getElementById('rectSel').addEventListener('click',()=>{ tool='select'; alert('Drag on canvas to create rectangular selection'); });
+    document.getElementById('lassoSel').addEventListener('click',()=>{ tool='lasso'; alert('Lasso not fully featured in lite mode — use as freehand draw to create path then Apply Mask'); });
+
+    // Crop: if selection exists, crop canvas
+    document.getElementById('crop').addEventListener('click',()=>{ if(!selRect) { alert('Make a selection first'); return; } const nx=selRect.x, ny=selRect.y, nw=selRect.w, nh=selRect.h; if(nw<=0||nh<=0) return; const nc=document.createElement('canvas'); nc.width=nw; nc.height=nh; const nctx=nc.getContext('2d'); // composite
+      for(const l of layers){ if(!l.visible) continue; if(l.type==='image') nctx.drawImage(l.img, l.x-nx, l.y-ny, l.w, l.h); if(l.type==='paint') nctx.drawImage(l.canvas, -nx, -ny); }
+      canvas.width=nw; canvas.height=nh; const im=new Image(); im.onload=()=>{ layers = [{id:uid(),name:'Cropped',type:'image',img:im,opacity:1,filters:{b:0,c:0,s:0,h:0},x:0,y:0,w:nw,h:nh,visible:true}]; selectedLayerId = layers[0].id; selRect=null; pushUndo(); render(); }; im.src = nc.toDataURL(); });
+
+    // Initial setup
+    (function init(){ ensureCanvasSize(); ctx.fillStyle='#06121a'; ctx.fillRect(0,0,canvas.width,canvas.height); addBlankLayer(); render(); pushUndo(); })();
+
+  </script>
+</body>
+</html>

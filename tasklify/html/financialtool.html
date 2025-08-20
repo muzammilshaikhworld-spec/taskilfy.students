@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Toolkit</title>
+    <!-- Use Tailwind CSS for a modern, responsive design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF library for generating PDF files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Font Awesome for the swap icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* Dark charcoal background */
+            color: #d1d5db; /* Light gray text */
+        }
+        .container {
+            max-width: 900px;
+        }
+        .tab-btn {
+            color: #a0a0a0;
+            transition: all 0.2s ease-in-out;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: #e5e7eb;
+            background-color: #374151;
+            border-bottom: 2px solid #9ca3af;
+        }
+        .tab-btn:hover {
+            color: #e5e7eb;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tool-card {
+            background-color: #374151; /* Darker gray for tool cards */
+            color: #d1d5db;
+        }
+        .input-field {
+            background-color: #4b5563; /* Even darker gray for inputs */
+            border-color: #6b7280;
+            color: #e5e7eb;
+        }
+        .input-field::placeholder {
+            color: #9ca3af;
+        }
+        .bill-table-header th {
+            background-color: #4b5563;
+        }
+        .bill-table-row:nth-child(even) {
+            background-color: #4b5563;
+        }
+        .bill-table-row:nth-child(odd) {
+            background-color: #374151;
+        }
+        .download-button {
+            background-color: #10b981; /* Green for download */
+            color: #ffffff;
+            transition: background-color 0.2s;
+        }
+        .download-button:hover {
+            background-color: #059669;
+        }
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s;
+        }
+        .modal-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: #374151;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+        .modal-close-btn {
+            background-color: #ef4444; /* Red close button */
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .modal-close-btn:hover {
+            background-color: #dc2626;
+        }
+        .swap-button {
+            background-color: #4b5563;
+            color: #d1d5db;
+            transition: background-color 0.2s;
+        }
+        .swap-button:hover {
+            background-color: #6b7280;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
+
+    <!-- Main Container -->
+    <div class="container bg-gray-800 p-6 md:p-10 rounded-2xl shadow-xl w-full">
+        <h1 class="text-3xl font-extrabold text-center text-gray-200 mb-6 md:mb-10">Financial Toolkit</h1>
+
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-600 mb-8">
+            <button id="simple-tab" class="tab-btn px-4 py-3 text-sm font-medium focus:outline-none flex-1">
+                Simple Interest
+            </button>
+            <button id="compound-tab" class="tab-btn px-4 py-3 text-sm font-medium focus:outline-none flex-1">
+                Compound Interest
+            </button>
+            <button id="currency-tab" class="tab-btn px-4 py-3 text-sm font-medium focus:outline-none flex-1">
+                Currency Converter
+            </button>
+            <button id="bill-maker-tab" class="tab-btn px-4 py-3 text-sm font-medium focus:outline-none flex-1">
+                Bill Maker
+            </button>
+            <button id="loan-tab" class="tab-btn active px-4 py-3 text-sm font-medium focus:outline-none flex-1">
+                Loan Calculator
+            </button>
+        </div>
+
+        <!-- Tab Content -->
+        
+        <!-- Simple Interest Calculator -->
+        <div id="simple-content" class="tab-content tool-card p-4 md:p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-gray-200 mb-4">Simple Interest Calculator</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="simple-principal" class="block text-sm font-medium text-gray-400">Principal Amount ($)</label>
+                    <input type="number" id="simple-principal" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 1000">
+                </div>
+                <div>
+                    <label for="simple-rate" class="block text-sm font-medium text-gray-400">Annual Rate (%)</label>
+                    <input type="number" id="simple-rate" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 5">
+                </div>
+                <div>
+                    <label for="simple-time" class="block text-sm font-medium text-gray-400">Time (Years)</label>
+                    <input type="number" id="simple-time" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 3">
+                </div>
+                <button id="calculate-simple" class="w-full bg-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-xl hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+                    Calculate
+                </button>
+            </div>
+            <div id="simple-result" class="mt-6 p-4 bg-gray-600 text-gray-200 rounded-xl font-medium text-center">
+                <!-- Result will appear here -->
+            </div>
+        </div>
+
+        <!-- Compound Interest Calculator -->
+        <div id="compound-content" class="tab-content tool-card p-4 md:p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-gray-200 mb-4">Compound Interest Calculator</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="compound-principal" class="block text-sm font-medium text-gray-400">Principal Amount ($)</label>
+                    <input type="number" id="compound-principal" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 1000">
+                </div>
+                <div>
+                    <label for="compound-rate" class="block text-sm font-medium text-gray-400">Annual Rate (%)</label>
+                    <input type="number" id="compound-rate" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 5">
+                </div>
+                <div>
+                    <label for="compound-time" class="block text-sm font-medium text-gray-400">Time (Years)</label>
+                    <input type="number" id="compound-time" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 3">
+                </div>
+                <div>
+                    <label for="compound-frequency" class="block text-sm font-medium text-gray-400">Compounding Frequency</label>
+                    <select id="compound-frequency" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field">
+                        <option value="1">Annually</option>
+                        <option value="2">Semi-annually</option>
+                        <option value="4">Quarterly</option>
+                        <option value="12">Monthly</option>
+                        <option value="365">Daily</option>
+                    </select>
+                </div>
+                <button id="calculate-compound" class="w-full bg-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-xl hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+                    Calculate
+                </button>
+            </div>
+            <div id="compound-result" class="mt-6 p-4 bg-gray-600 text-gray-200 rounded-xl font-medium text-center">
+                <!-- Result will appear here -->
+            </div>
+        </div>
+        
+        <!-- Currency Converter -->
+        <div id="currency-content" class="tab-content tool-card p-4 md:p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-gray-200 mb-4">Currency Converter</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="currency-amount" class="block text-sm font-medium text-gray-400">Amount</label>
+                    <input type="number" id="currency-amount" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 100">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="flex-1">
+                        <label for="currency-from" class="block text-sm font-medium text-gray-400">From Currency</label>
+                        <select id="currency-from" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field">
+                            <option value="USD">US Dollar (USD)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                            <option value="GBP">British Pound (GBP)</option>
+                            <option value="JPY">Japanese Yen (JPY)</option>
+                            <option value="CAD">Canadian Dollar (CAD)</option>
+                            <option value="AUD">Australian Dollar (AUD)</option>
+                            <option value="INR">Indian Rupee (INR)</option>
+                            <option value="CHF">Swiss Franc (CHF)</option>
+                            <option value="CNY">Chinese Yuan (CNY)</option>
+                        </select>
+                    </div>
+                    <button id="swap-currencies-btn" class="mt-6 p-2 rounded-full swap-button focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2" aria-label="Swap Currencies">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                    <div class="flex-1">
+                        <label for="currency-to" class="block text-sm font-medium text-gray-400">To Currency</label>
+                        <select id="currency-to" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field">
+                            <option value="USD">US Dollar (USD)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                            <option value="GBP">British Pound (GBP)</option>
+                            <option value="JPY">Japanese Yen (JPY)</option>
+                            <option value="CAD">Canadian Dollar (CAD)</option>
+                            <option value="AUD">Australian Dollar (AUD)</option>
+                            <option value="INR">Indian Rupee (INR)</option>
+                            <option value="CHF">Swiss Franc (CHF)</option>
+                            <option value="CNY">Chinese Yuan (CNY)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div id="currency-result" class="mt-6 p-4 bg-gray-600 text-gray-200 rounded-xl font-medium text-center">
+                <!-- Result will appear here -->
+            </div>
+        </div>
+
+        <!-- Bill Maker Tool -->
+        <div id="bill-maker-content" class="tab-content tool-card p-4 md:p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-gray-200 mb-4">Bill Maker</h2>
+            
+            <!-- Bill Format Selection -->
+            <div class="mb-6">
+                <label for="bill-format-select" class="block text-sm font-medium text-gray-400 mb-2">Select Bill Format</label>
+                <select id="bill-format-select" class="block w-full rounded-md shadow-sm p-2 input-field">
+                    <option value="general">General Bill</option>
+                    <option value="grocery">Grocery Bill (with Quantity)</option>
+                    <option value="mobile">Mobile/Electronic Bill (with Item ID)</option>
+                </select>
+            </div>
+
+            <!-- Item Entry Form -->
+            <div id="item-entry-form" class="space-y-4">
+                <div class="flex flex-col md:flex-row md:space-x-4">
+                    <div class="flex-1">
+                        <label for="item-name" class="block text-sm font-medium text-gray-400">Item Name</label>
+                        <input type="text" id="item-name" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., Laptop">
+                    </div>
+                    <div class="flex-1 mt-4 md:mt-0">
+                        <label for="item-price" class="block text-sm font-medium text-gray-400">Item Price ($)</label>
+                        <input type="number" id="item-price" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 1000">
+                    </div>
+                    <div id="quantity-input-container" class="flex-1 mt-4 md:mt-0" style="display: none;">
+                        <label for="item-quantity" class="block text-sm font-medium text-gray-400">Quantity</label>
+                        <input type="number" id="item-quantity" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 1">
+                    </div>
+                    <div id="id-input-container" class="flex-1 mt-4 md:mt-0" style="display: none;">
+                        <label for="item-id" class="block text-sm font-medium text-gray-400">Item ID</label>
+                        <input type="text" id="item-id" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., SN-12345">
+                    </div>
+                </div>
+                <button id="add-item-btn" class="w-full bg-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-xl hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+                    Add Item
+                </button>
+            </div>
+
+            <!-- Bill Table and Totals -->
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold text-gray-200 mb-2">Current Bill</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left rounded-lg overflow-hidden">
+                        <thead id="bill-table-header">
+                            <!-- Header will be rendered by JavaScript -->
+                        </thead>
+                        <tbody id="bill-items-body">
+                            <!-- Items will be inserted here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- GST and Total Calculation -->
+            <div id="gst-breakdown-container" class="mt-6 hidden">
+                <div class="bg-gray-700 p-4 rounded-xl space-y-2">
+                    <div class="flex justify-between font-medium text-gray-400">
+                        <span>Subtotal:</span>
+                        <span id="subtotal-val">$0.00</span>
+                    </div>
+                    <div class="flex justify-between font-medium text-gray-400">
+                        <span>CGST (9%):</span>
+                        <span id="cgst-val">$0.00</span>
+                    </div>
+                    <div class="flex justify-between font-medium text-gray-400">
+                        <span>SGST (9%):</span>
+                        <span id="sgst-val">$0.00</span>
+                    </div>
+                    <div class="flex justify-between font-bold text-lg text-gray-200 pt-2 border-t border-gray-600">
+                        <span>Total Amount:</span>
+                        <span id="total-amount-val">$0.00</span>
+                    </div>
+                </div>
+                <button id="download-bill-btn" class="w-full mt-4 download-button font-semibold py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2">
+                    Download Bill
+                </button>
+            </div>
+        </div>
+
+        <!-- Loan Calculator -->
+        <div id="loan-content" class="tab-content active tool-card p-4 md:p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-gray-200 mb-4">Loan Calculator</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="loan-amount" class="block text-sm font-medium text-gray-400">Loan Amount ($)</label>
+                    <input type="number" id="loan-amount" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 50000">
+                </div>
+                <div>
+                    <label for="loan-rate" class="block text-sm font-medium text-gray-400">Annual Interest Rate (%)</label>
+                    <input type="number" id="loan-rate" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 8.5">
+                </div>
+                <div>
+                    <label for="loan-term" class="block text-sm font-medium text-gray-400">Loan Term (Years)</label>
+                    <input type="number" id="loan-term" class="mt-1 block w-full rounded-md shadow-sm p-2 input-field" placeholder="e.g., 5">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="include-gst" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-600 rounded">
+                    <label for="include-gst" class="ml-2 block text-sm text-gray-300">Include 18% GST on Interest</label>
+                </div>
+                <button id="calculate-loan" class="w-full bg-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-xl hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+                    Calculate
+                </button>
+            </div>
+            <div id="loan-result" class="mt-6 p-4 bg-gray-600 text-gray-200 rounded-xl font-medium">
+                <!-- Results will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Options Modal -->
+    <div id="download-modal" class="modal-overlay">
+        <div class="modal-content text-center">
+            <h3 class="text-xl font-semibold text-gray-200 mb-4">Choose Download Format</h3>
+            <div class="space-y-4">
+                <button id="download-csv-btn" class="w-full bg-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-xl hover:bg-gray-700 transition duration-200">
+                    Download as CSV
+                </button>
+                <button id="download-html-btn" class="w-full bg-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-xl hover:bg-gray-700 transition duration-200">
+                    Download as HTML
+                </button>
+                <button id="download-pdf-btn" class="w-full bg-gray-600 text-gray-200 font-semibold py-3 px-4 rounded-xl hover:bg-gray-700 transition duration-200">
+                    Download as PDF
+                </button>
+            </div>
+            <button id="close-modal-btn" class="w-full mt-6 modal-close-btn font-semibold py-3 px-4 rounded-xl">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript for functionality -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Tab Switching Logic ---
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    contents.forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    const contentId = tab.id.replace('-tab', '-content');
+                    document.getElementById(contentId).classList.add('active');
+                });
+            });
+            // Set initial active tab
+            document.getElementById('loan-tab').click();
+
+            // --- Simple Interest Calculator Logic ---
+            const simplePrincipal = document.getElementById('simple-principal');
+            const simpleRate = document.getElementById('simple-rate');
+            const simpleTime = document.getElementById('simple-time');
+            const simpleResult = document.getElementById('simple-result');
+            const calculateSimpleBtn = document.getElementById('calculate-simple');
+            calculateSimpleBtn.addEventListener('click', () => {
+                const p = parseFloat(simplePrincipal.value);
+                const r = parseFloat(simpleRate.value);
+                const t = parseFloat(simpleTime.value);
+                if (isNaN(p) || isNaN(r) || isNaN(t) || p <= 0 || r < 0 || t <= 0) {
+                    simpleResult.innerHTML = '<span class="text-red-400">Please enter valid positive numbers.</span>';
+                    return;
+                }
+                const interest = (p * r * t) / 100;
+                const totalAmount = p + interest;
+                simpleResult.innerHTML = `
+                    <p>Total Interest: <strong>$${interest.toFixed(2)}</strong></p>
+                    <p>Total Amount: <strong>$${totalAmount.toFixed(2)}</strong></p>
+                `;
+            });
+
+            // --- Compound Interest Calculator Logic ---
+            const compoundPrincipal = document.getElementById('compound-principal');
+            const compoundRate = document.getElementById('compound-rate');
+            const compoundTime = document.getElementById('compound-time');
+            const compoundFrequency = document.getElementById('compound-frequency');
+            const compoundResult = document.getElementById('compound-result');
+            const calculateCompoundBtn = document.getElementById('calculate-compound');
+            calculateCompoundBtn.addEventListener('click', () => {
+                const p = parseFloat(compoundPrincipal.value);
+                const r = parseFloat(compoundRate.value) / 100;
+                const t = parseFloat(compoundTime.value);
+                const n = parseFloat(compoundFrequency.value);
+                if (isNaN(p) || isNaN(r) || isNaN(t) || isNaN(n) || p <= 0 || r < 0 || t <= 0 || n <= 0) {
+                    compoundResult.innerHTML = '<span class="text-red-400">Please enter valid positive numbers.</span>';
+                    return;
+                }
+                const totalAmount = p * Math.pow((1 + (r / n)), (n * t));
+                const interest = totalAmount - p;
+                compoundResult.innerHTML = `
+                    <p>Total Interest: <strong>$${interest.toFixed(2)}</strong></p>
+                    <p>Total Amount: <strong>$${totalAmount.toFixed(2)}</strong></p>
+                `;
+            });
+            
+            // --- Currency Converter Logic ---
+            const currencyAmount = document.getElementById('currency-amount');
+            const currencyFrom = document.getElementById('currency-from');
+            const currencyTo = document.getElementById('currency-to');
+            const currencyResult = document.getElementById('currency-result');
+            const swapCurrenciesBtn = document.getElementById('swap-currencies-btn');
+            
+            // Hard-coded exchange rates (as of recent data)
+            const exchangeRates = {
+                'USD': { 'EUR': 0.93, 'GBP': 0.81, 'JPY': 156.98, 'CAD': 1.37, 'AUD': 1.52, 'INR': 83.47, 'CHF': 0.91, 'CNY': 7.25 },
+                'EUR': { 'USD': 1.07, 'GBP': 0.87, 'JPY': 168.49, 'CAD': 1.47, 'AUD': 1.63, 'INR': 89.65, 'CHF': 0.98, 'CNY': 7.78 },
+                'GBP': { 'USD': 1.23, 'EUR': 1.15, 'JPY': 193.30, 'CAD': 1.69, 'AUD': 1.88, 'INR': 102.93, 'CHF': 1.12, 'CNY': 8.92 },
+                'JPY': { 'USD': 0.0064, 'EUR': 0.0059, 'GBP': 0.0052, 'CAD': 0.0087, 'AUD': 0.0097, 'INR': 0.53, 'CHF': 0.0058, 'CNY': 0.046 },
+                'CAD': { 'USD': 0.73, 'EUR': 0.68, 'GBP': 0.59, 'JPY': 114.93, 'AUD': 1.11, 'INR': 60.99, 'CHF': 0.66, 'CNY': 5.29 },
+                'AUD': { 'USD': 0.66, 'EUR': 0.61, 'GBP': 0.53, 'JPY': 103.49, 'CAD': 0.90, 'INR': 54.91, 'CHF': 0.60, 'CNY': 4.76 },
+                'INR': { 'USD': 0.012, 'EUR': 0.011, 'GBP': 0.0097, 'JPY': 1.88, 'CAD': 0.016, 'AUD': 0.018, 'CHF': 0.011, 'CNY': 0.087 },
+                'CHF': { 'USD': 1.10, 'EUR': 1.02, 'GBP': 0.89, 'JPY': 173.34, 'CAD': 1.51, 'AUD': 1.67, 'INR': 92.17, 'CNY': 7.95 },
+                'CNY': { 'USD': 0.14, 'EUR': 0.13, 'GBP': 0.11, 'JPY': 21.72, 'CAD': 0.19, 'AUD': 0.21, 'INR': 11.53, 'CHF': 0.13 },
+            };
+
+            const performConversion = () => {
+                const amount = parseFloat(currencyAmount.value);
+                const from = currencyFrom.value;
+                const to = currencyTo.value;
+                if (isNaN(amount) || amount <= 0) {
+                    currencyResult.innerHTML = '<span class="text-red-400">Please enter a valid amount.</span>';
+                    return;
+                }
+                if (from === to) {
+                    currencyResult.innerHTML = `<p>Converted Amount: <strong>${amount.toFixed(2)} ${to}</strong></p>`;
+                    return;
+                }
+                let rate = exchangeRates[from][to];
+                if (!rate) {
+                    currencyResult.innerHTML = '<span class="text-red-400">Exchange rate not available.</span>';
+                    return;
+                }
+                const convertedAmount = amount * rate;
+                currencyResult.innerHTML = `<p>Converted Amount: <strong>${convertedAmount.toFixed(2)} ${to}</strong></p>`;
+            };
+            
+            // Listen for input changes to dynamically update the conversion
+            currencyAmount.addEventListener('input', performConversion);
+            currencyFrom.addEventListener('change', performConversion);
+            currencyTo.addEventListener('change', performConversion);
+
+            // Swap currencies functionality
+            swapCurrenciesBtn.addEventListener('click', () => {
+                const fromValue = currencyFrom.value;
+                const toValue = currencyTo.value;
+                currencyFrom.value = toValue;
+                currencyTo.value = fromValue;
+                performConversion();
+            });
+
+            // --- Bill Maker Logic ---
+            const billFormatSelect = document.getElementById('bill-format-select');
+            const itemNameInput = document.getElementById('item-name');
+            const itemPriceInput = document.getElementById('item-price');
+            const itemQuantityInput = document.getElementById('item-quantity');
+            const itemIdInput = document.getElementById('item-id');
+            const quantityContainer = document.getElementById('quantity-input-container');
+            const idContainer = document.getElementById('id-input-container');
+            const addItemBtn = document.getElementById('add-item-btn');
+            const billTableHead = document.getElementById('bill-table-header');
+            const billItemsBody = document.getElementById('bill-items-body');
+            const gstBreakdownContainer = document.getElementById('gst-breakdown-container');
+            const subtotalVal = document.getElementById('subtotal-val');
+            const cgstVal = document.getElementById('cgst-val');
+            const sgstVal = document.getElementById('sgst-val');
+            const totalAmountVal = document.getElementById('total-amount-val');
+            const downloadBillBtn = document.getElementById('download-bill-btn');
+            let billItems = [];
+
+            // Updates the UI based on the selected bill format
+            const updateUIForFormat = (format) => {
+                quantityContainer.style.display = 'none';
+                idContainer.style.display = 'none';
+
+                if (format === 'grocery') {
+                    quantityContainer.style.display = 'block';
+                } else if (format === 'mobile') {
+                    idContainer.style.display = 'block';
+                }
+                renderBill();
+            };
+
+            // Renders the bill table and calculates totals
+            const renderBill = () => {
+                billItemsBody.innerHTML = '';
+                const format = billFormatSelect.value;
+                let subtotal = 0;
+                
+                // Set the table header based on format
+                if (format === 'grocery') {
+                    billTableHead.innerHTML = `
+                        <tr class="bill-table-header">
+                            <th class="p-3 font-semibold text-sm text-gray-200">Item</th>
+                            <th class="p-3 font-semibold text-sm text-gray-200 text-right">Qty</th>
+                            <th class="p-3 font-semibold text-sm text-gray-200 text-right">Price</th>
+                            <th class="p-3 font-semibold text-sm text-gray-200 text-right">Total</th>
+                        </tr>
+                    `;
+                } else if (format === 'mobile') {
+                    billTableHead.innerHTML = `
+                        <tr class="bill-table-header">
+                            <th class="p-3 font-semibold text-sm text-gray-200">Item</th>
+                            <th class="p-3 font-semibold text-sm text-gray-200">ID</th>
+                            <th class="p-3 font-semibold text-sm text-gray-200 text-right">Price</th>
+                        </tr>
+                    `;
+                } else { // General
+                    billTableHead.innerHTML = `
+                        <tr class="bill-table-header">
+                            <th class="p-3 font-semibold text-sm text-gray-200">Item</th>
+                            <th class="p-3 font-semibold text-sm text-gray-200 text-right">Price</th>
+                        </tr>
+                    `;
+                }
+
+                // Populate the table body
+                billItems.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'bill-table-row';
+                    
+                    if (format === 'grocery') {
+                        const lineTotal = item.price * item.quantity;
+                        subtotal += lineTotal;
+                        row.innerHTML = `
+                            <td class="p-3">${item.name}</td>
+                            <td class="p-3 text-right">${item.quantity}</td>
+                            <td class="p-3 text-right">$${item.price.toFixed(2)}</td>
+                            <td class="p-3 text-right">$${lineTotal.toFixed(2)}</td>
+                        `;
+                    } else if (format === 'mobile') {
+                        subtotal += item.price;
+                        row.innerHTML = `
+                            <td class="p-3">${item.name}</td>
+                            <td class="p-3">${item.id}</td>
+                            <td class="p-3 text-right">$${item.price.toFixed(2)}</td>
+                        `;
+                    } else { // General
+                        subtotal += item.price;
+                        row.innerHTML = `
+                            <td class="p-3">${item.name}</td>
+                            <td class="p-3 text-right">$${item.price.toFixed(2)}</td>
+                        `;
+                    }
+                    billItemsBody.appendChild(row);
+                });
+
+                // Show/hide GST container and update values
+                if (billItems.length === 0) {
+                     gstBreakdownContainer.classList.add('hidden');
+                } else {
+                     gstBreakdownContainer.classList.remove('hidden');
+                }
+
+                const cgst = subtotal * 0.09;
+                const sgst = subtotal * 0.09;
+                const total = subtotal + cgst + sgst;
+                subtotalVal.textContent = `$${subtotal.toFixed(2)}`;
+                cgstVal.textContent = `$${cgst.toFixed(2)}`;
+                sgstVal.textContent = `$${sgst.toFixed(2)}`;
+                totalAmountVal.textContent = `$${total.toFixed(2)}`;
+            };
+
+            // Event listener for format selection
+            billFormatSelect.addEventListener('change', (e) => {
+                updateUIForFormat(e.target.value);
+            });
+
+            // Add new item to the bill
+            addItemBtn.addEventListener('click', () => {
+                const format = billFormatSelect.value;
+                const name = itemNameInput.value.trim();
+                const price = parseFloat(itemPriceInput.value);
+
+                if (name === '' || isNaN(price) || price <= 0) {
+                    // Using a simple alert for now
+                    alert('Please enter a valid item name and a positive price.');
+                    return;
+                }
+
+                if (format === 'grocery') {
+                    const quantity = parseInt(itemQuantityInput.value);
+                    if (isNaN(quantity) || quantity <= 0) {
+                        alert('Please enter a valid quantity.');
+                        return;
+                    }
+                    billItems.push({ name, price, quantity });
+                    itemQuantityInput.value = '1';
+                } else if (format === 'mobile') {
+                    const id = itemIdInput.value.trim();
+                    if (id === '') {
+                        alert('Please enter an Item ID.');
+                        return;
+                    }
+                    billItems.push({ name, price, id });
+                    itemIdInput.value = '';
+                } else { // General
+                    billItems.push({ name, price });
+                }
+
+                itemNameInput.value = '';
+                itemPriceInput.value = '';
+                renderBill();
+            });
+
+            // --- Download Modal and Logic ---
+            const downloadModal = document.getElementById('download-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const downloadCsvBtn = document.getElementById('download-csv-btn');
+            const downloadHtmlBtn = document.getElementById('download-html-btn');
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+
+            downloadBillBtn.addEventListener('click', () => {
+                if (billItems.length === 0) {
+                     alert('Please add items to the bill before downloading.');
+                     return;
+                }
+                downloadModal.classList.add('show');
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                downloadModal.classList.remove('show');
+            });
+
+            const downloadFile = (filename, content, mimeType) => {
+                const blob = new Blob([content], { type: mimeType });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            };
+
+            downloadCsvBtn.addEventListener('click', () => {
+                const format = billFormatSelect.value;
+                let csvContent = "";
+                let subtotal = 0;
+
+                if (format === 'grocery') {
+                    csvContent += "Item,Quantity,Price,Line Total\n";
+                    billItems.forEach(item => {
+                        const lineTotal = item.price * item.quantity;
+                        csvContent += `${item.name},${item.quantity},${item.price.toFixed(2)},${lineTotal.toFixed(2)}\n`;
+                        subtotal += lineTotal;
+                    });
+                } else if (format === 'mobile') {
+                    csvContent += "Item,ID,Price\n";
+                    billItems.forEach(item => {
+                        csvContent += `${item.name},${item.id},${item.price.toFixed(2)}\n`;
+                        subtotal += item.price;
+                    });
+                } else { // General
+                    csvContent += "Item,Price\n";
+                    billItems.forEach(item => {
+                        csvContent += `${item.name},${item.price.toFixed(2)}\n`;
+                        subtotal += item.price;
+                    });
+                }
+                
+                const cgst = subtotal * 0.09;
+                const sgst = subtotal * 0.09;
+                const total = subtotal + cgst + sgst;
+                csvContent += `\nSubtotal,,${subtotal.toFixed(2)}\n`;
+                csvContent += `CGST (9%),,${cgst.toFixed(2)}\n`;
+                csvContent += `SGST (9%),,${sgst.toFixed(2)}\n`;
+                csvContent += `Total Amount,,${total.toFixed(2)}\n`;
+
+                downloadFile(`bill_${new Date().toISOString().slice(0, 10)}.csv`, csvContent, 'text/csv;charset=utf-8;');
+                downloadModal.classList.remove('show');
+            });
+
+            downloadHtmlBtn.addEventListener('click', () => {
+                const format = billFormatSelect.value;
+                let tableHtml = "";
+                if (format === 'grocery') {
+                    tableHtml = `
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th style="text-align: right;">Price</th>
+                                <th style="text-align: right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${billItems.map(item => `<tr><td>${item.name}</td><td>${item.quantity}</td><td style="text-align: right;">$${item.price.toFixed(2)}</td><td style="text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td></tr>`).join('')}
+                        </tbody>
+                    `;
+                } else if (format === 'mobile') {
+                    tableHtml = `
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>ID</th>
+                                <th style="text-align: right;">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${billItems.map(item => `<tr><td>${item.name}</td><td>${item.id}</td><td style="text-align: right;">$${item.price.toFixed(2)}</td></tr>`).join('')}
+                        </tbody>
+                    `;
+                } else { // General
+                    tableHtml = `
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th style="text-align: right;">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${billItems.map(item => `<tr><td>${item.name}</td><td style="text-align: right;">$${item.price.toFixed(2)}</td></tr>`).join('')}
+                        </tbody>
+                    `;
+                }
+
+                let htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bill</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f4; padding: 20px; color: #333; }
+        .bill-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .bill-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .bill-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .bill-table th, .bill-table td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+        .bill-table th { background-color: #f2f2f2; }
+        .bill-summary { text-align: right; }
+        .bill-summary div { margin-bottom: 5px; }
+        .bill-summary .total { font-size: 1.2em; font-weight: bold; border-top: 2px solid #333; padding-top: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="bill-container">
+        <div class="bill-header">
+            <h2>BILL / INVOICE</h2>
+            <p>Date: ${new Date().toLocaleDateString()}</p>
+            <p>Time: ${new Date().toLocaleTimeString()}</p>
+        </div>
+        <table class="bill-table">
+            ${tableHtml}
+        </table>
+        <div class="bill-summary">
+            <div>Subtotal: ${subtotalVal.textContent}</div>
+            <div>CGST (9%): ${cgstVal.textContent}</div>
+            <div>SGST (9%): ${sgstVal.textContent}</div>
+            <div class="total">Total Amount: ${totalAmountVal.textContent}</div>
+        </div>
+    </div>
+</body>
+</html>
+                `;
+                downloadFile(`bill_${new Date().toISOString().slice(0, 10)}.html`, htmlContent, 'text/html');
+                downloadModal.classList.remove('show');
+            });
+            
+            downloadPdfBtn.addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const format = billFormatSelect.value;
+                
+                doc.setFontSize(20);
+                doc.text("BILL / INVOICE", 105, 20, null, null, "center");
+                doc.setFontSize(12);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, 105, 30, null, null, "center");
+                
+                let y = 45;
+                doc.setFontSize(14);
+                doc.text("Items", 15, y);
+                doc.text("Price ($)", 195, y, null, null, "right");
+                y += 5;
+                doc.setDrawColor(0);
+                doc.line(15, y, 195, y);
+                y += 5;
+
+                doc.setFontSize(12);
+                let subtotal = 0;
+                billItems.forEach(item => {
+                    if (format === 'grocery') {
+                         const lineTotal = item.price * item.quantity;
+                         subtotal += lineTotal;
+                         doc.text(`${item.name} (${item.quantity} x $${item.price.toFixed(2)})`, 15, y);
+                         doc.text(`$${lineTotal.toFixed(2)}`, 195, y, null, null, "right");
+                    } else if (format === 'mobile') {
+                         subtotal += item.price;
+                         doc.text(`${item.name} (ID: ${item.id})`, 15, y);
+                         doc.text(`$${item.price.toFixed(2)}`, 195, y, null, null, "right");
+                    } else { // General
+                         subtotal += item.price;
+                         doc.text(item.name, 15, y);
+                         doc.text(`$${item.price.toFixed(2)}`, 195, y, null, null, "right");
+                    }
+                    y += 10;
+                });
+                
+                y += 10;
+                doc.setDrawColor(0);
+                doc.line(140, y, 195, y);
+                y += 5;
+
+                const cgst = subtotal * 0.09;
+                const sgst = subtotal * 0.09;
+                const total = subtotal + cgst + sgst;
+                
+                doc.text(`Subtotal: $${subtotal.toFixed(2)}`, 195, y, null, null, "right");
+                y += 7;
+                doc.text(`CGST (9%): $${cgst.toFixed(2)}`, 195, y, null, null, "right");
+                y += 7;
+                doc.text(`SGST (9%): $${sgst.toFixed(2)}`, 195, y, null, null, "right");
+                y += 10;
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Total Amount: $${total.toFixed(2)}`, 195, y, null, null, "right");
+
+                doc.save(`bill_${new Date().toISOString().slice(0, 10)}.pdf`);
+                downloadModal.classList.remove('show');
+            });
+
+            // --- Loan Calculator Logic ---
+            const loanAmountInput = document.getElementById('loan-amount');
+            const loanRateInput = document.getElementById('loan-rate');
+            const loanTermInput = document.getElementById('loan-term');
+            const includeGstCheckbox = document.getElementById('include-gst');
+            const calculateLoanBtn = document.getElementById('calculate-loan');
+            const loanResultDiv = document.getElementById('loan-result');
+            
+            calculateLoanBtn.addEventListener('click', () => {
+                const principal = parseFloat(loanAmountInput.value);
+                const annualRate = parseFloat(loanRateInput.value);
+                const termYears = parseFloat(loanTermInput.value);
+                const includeGst = includeGstCheckbox.checked;
+
+                if (isNaN(principal) || isNaN(annualRate) || isNaN(termYears) || principal <= 0 || annualRate < 0 || termYears <= 0) {
+                    loanResultDiv.innerHTML = '<span class="text-red-400">Please enter valid positive numbers for all fields.</span>';
+                    return;
+                }
+
+                // Calculations without GST
+                const monthlyRate = (annualRate / 100) / 12;
+                const totalMonths = termYears * 12;
+                let emi;
+                if (monthlyRate === 0) {
+                    emi = principal / totalMonths;
+                } else {
+                    emi = principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
+                }
+                const totalPayment = emi * totalMonths;
+                const totalInterest = totalPayment - principal;
+
+                // Calculations with GST
+                let gstOnInterest = 0;
+                let emiWithGst = emi;
+                let totalPaymentWithGst = totalPayment;
+
+                if (includeGst) {
+                    gstOnInterest = totalInterest * 0.18; // 18% GST
+                    totalPaymentWithGst = totalPayment + gstOnInterest;
+                    emiWithGst = totalPaymentWithGst / totalMonths;
+                }
+
+                // Display results
+                let resultHtml = `
+                    <h4 class="text-lg font-bold text-gray-200 mb-2">Loan Details</h4>
+                    <p class="mb-1">Monthly EMI: <strong>$${emi.toFixed(2)}</strong></p>
+                    <p class="mb-1">Total Interest: <strong>$${totalInterest.toFixed(2)}</strong></p>
+                    <p class="mb-1">Total Amount: <strong>$${totalPayment.toFixed(2)}</strong></p>
+                `;
+                
+                if (includeGst) {
+                    resultHtml += `
+                        <h4 class="text-lg font-bold text-gray-200 mt-4 mb-2">Including GST (18%)</h4>
+                        <p class="mb-1">GST on Interest: <strong>$${gstOnInterest.toFixed(2)}</strong></p>
+                        <p class="mb-1">Monthly EMI (with GST): <strong>$${emiWithGst.toFixed(2)}</strong></p>
+                        <p class="mb-1">Total Amount (with GST): <strong>$${totalPaymentWithGst.toFixed(2)}</strong></p>
+                    `;
+                }
+
+                loanResultDiv.innerHTML = resultHtml;
+            });
+
+            // Initial UI setup
+            updateUIForFormat(billFormatSelect.value);
+        });
+    </script>
+</body>
+</html>

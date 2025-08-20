@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Screen Recorder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        /* General body and container styling for a modern look */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #e2e8f0;
+            color: #334155;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 1rem;
+            color: #1e293b;
+        }
+
+        /* Video container for overlaying webcam and drawing canvas */
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-height: 500px;
+            aspect-ratio: 16/9;
+            background-color: #e2e8f0;
+            border: 2px solid #cbd5e1;
+            border-radius: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            display: none;
+        }
+
+        #videoPreview, #webcamPreview, #drawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #webcamPreview {
+            width: 20%;
+            height: 20%;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            border-radius: 0.5rem;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            display: none;
+        }
+        
+        /* Message box for user feedback */
+        .message-box {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            color: #64748b;
+            font-size: 1.1rem;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Countdown timer styling */
+        #countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffffff;
+            font-size: 10rem;
+            font-weight: 700;
+            z-index: 20;
+        }
+
+        /* Recording status and timer */
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .recording-indicator {
+            display: none;
+            width: 16px;
+            height: 16px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1s infinite ease-in-out;
+            margin-right: 8px;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* Settings group styling */
+        .settings-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+            padding: 0 1rem;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            min-width: 150px;
+        }
+
+        .settings-group label {
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .settings-group select, .settings-group input, .settings-group button {
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            color: #475569;
+            font-size: 1rem;
+            appearance: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .settings-group button {
+            border: none;
+            background-color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .settings-group button:hover {
+            background-color: #cbd5e1;
+        }
+        
+        .settings-group select:focus, .settings-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Drawing tools */
+        #drawing-tools {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .color-picker:hover {
+            transform: scale(1.1);
+        }
+        .color-picker.active {
+            border-color: #3b82f6;
+            transform: scale(1.2);
+        }
+
+        /* Button group layout */
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        /* Button styling with hover and active effects */
+        button {
+            padding: 0.8rem 1.6rem;
+            border: none;
+            border-radius: 9999px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-transform: uppercase;
+        }
+        
+        /* Color themes for buttons */
+        #startBtn {
+            background-color: #22c55e;
+            color: #ffffff;
+        }
+        #startBtn:hover {
+            background-color: #16a34a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        #stopBtn {
+            background-color: #ef4444;
+            color: #ffffff;
+        }
+        #stopBtn:hover {
+            background-color: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        #pauseBtn {
+            background-color: #f97316;
+            color: #ffffff;
+        }
+        #pauseBtn:hover {
+            background-color: #ea580c;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        #downloadBtn {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+        #downloadBtn:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        #drawBtn {
+            background-color: #8b5cf6;
+            color: #ffffff;
+        }
+
+        #drawBtn.active, #drawBtn:hover {
+            background-color: #7c3aed;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Disabled button state */
+        button:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Custom Modal styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+        .modal-content p {
+            margin: 0 0 1.5rem;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Screen Recorder</h1>
+        
+        <!-- Recording status and timer -->
+        <div class="status-bar">
+            <div id="recordingIndicator" class="recording-indicator"></div>
+            <p id="recordingDuration" style="font-size: 1.2rem; font-weight: 600; color: #475569;">00:00:00</p>
+        </div>
+
+        <!-- Settings for frame rate, quality, and audio input -->
+        <div class="settings-group">
+            <div class="setting-item">
+                <label for="frameRate">Frame Rate (FPS):</label>
+                <select id="frameRate">
+                    <option value="15">15 FPS (Stable)</option>
+                    <option value="30" selected>30 FPS (Standard)</option>
+                    <option value="60">60 FPS (High Quality)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="quality">Video Quality:</label>
+                <select id="quality">
+                    <option value="1000000">Low (1 Mbps)</option>
+                    <option value="3000000" selected>Medium (3 Mbps)</option>
+                    <option value="6000000">High (6 Mbps)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="audioSource">Audio Input:</label>
+                <select id="audioSource">
+                    <option value="none">No Audio</option>
+                    <option value="system">System Audio</option>
+                    <!-- Microphone options will be populated by JavaScript -->
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="webcamSource">Webcam:</label>
+                <select id="webcamSource">
+                    <option value="none">No Webcam</option>
+                    <!-- Webcam options will be populated by JavaScript -->
+                </select>
+            </div>
+            <div class="setting-item" style="flex-grow: 1;">
+                <label for="hotkeyInput">Hotkey (Start/Stop):</label>
+                <input type="text" id="hotkeyInput" placeholder="Press a key (e.g., S)" readonly>
+            </div>
+            <div class="setting-item">
+                <button id="saveSettingsBtn">Save Settings</button>
+            </div>
+            <div class="setting-item">
+                <button id="resetSettingsBtn">Reset Settings</button>
+            </div>
+        </div>
+        
+        <!-- Message box for user feedback -->
+        <div id="messageBox" class="message-box">
+            Select your desired settings and click "Start Recording" to begin.
+        </div>
+
+        <!-- Video container with video, webcam, and drawing canvas -->
+        <div id="videoContainer" class="video-container">
+            <video id="videoPreview" autoplay muted></video>
+            <video id="webcamPreview" autoplay muted></video>
+            <canvas id="drawingCanvas"></canvas>
+            <div id="countdown-overlay">3</div>
+        </div>
+
+        <!-- Drawing Tools -->
+        <div id="drawing-tools" style="display:none;">
+            <div id="red" class="color-picker" style="background-color: #ef4444;"></div>
+            <div id="yellow" class="color-picker" style="background-color: #facc15;"></div>
+            <div id="blue" class="color-picker" style="background-color: #3b82f6;"></div>
+            <div id="green" class="color-picker" style="background-color: #22c55e;"></div>
+            <div id="black" class="color-picker active" style="background-color: #1e293b;"></div>
+        </div>
+
+        <div class="button-group">
+            <button id="startBtn">
+                <i class="fas fa-play"></i> Start Recording
+            </button>
+            <button id="drawBtn" disabled>
+                <i class="fas fa-paint-brush"></i> Draw
+            </button>
+            <button id="pauseBtn" disabled>
+                <i class="fas fa-pause"></i> Pause
+            </button>
+            <button id="stopBtn" disabled>
+                <i class="fas fa-stop"></i> Stop Recording
+            </button>
+            <button id="downloadBtn" disabled>
+                <i class="fas fa-download"></i> Download
+            </button>
+        </div>
+    </div>
+    
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="modal-overlay">
+        <div class="modal-content">
+            <p>Do you want to save the current recording before starting a new one?</p>
+            <div class="button-group">
+                <button id="modalSaveBtn">Save & Start New</button>
+                <button id="modalDiscardBtn">Discard & Start New</button>
+                <button id="modalCancelBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get references to all HTML elements
+        const videoContainer = document.getElementById('videoContainer');
+        const videoPreview = document.getElementById('videoPreview');
+        const webcamPreview = document.getElementById('webcamPreview');
+        const drawingCanvas = document.getElementById('drawingCanvas');
+        const countdownOverlay = document.getElementById('countdown-overlay');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const drawBtn = document.getElementById('drawBtn');
+        const messageBox = document.getElementById('messageBox');
+        const frameRateSelect = document.getElementById('frameRate');
+        const qualitySelect = document.getElementById('quality');
+        const audioSourceSelect = document.getElementById('audioSource');
+        const webcamSourceSelect = document.getElementById('webcamSource');
+        const hotkeyInput = document.getElementById('hotkeyInput');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const resetSettingsBtn = document.getElementById('resetSettingsBtn');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const recordingDuration = document.getElementById('recordingDuration');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const modalSaveBtn = document.getElementById('modalSaveBtn');
+        const modalDiscardBtn = document.getElementById('modalDiscardBtn');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        const drawingTools = document.getElementById('drawing-tools');
+        const colorPickers = document.querySelectorAll('.color-picker');
+
+        // Global variables for the app state
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let timerInterval = null;
+        let seconds = 0;
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let drawColor = '#1e293b';
+        let hotkey = 's'; // Default hotkey
+        let isRecordingActive = false;
+
+        // Drawing context
+        const ctx = drawingCanvas.getContext('2d');
+
+        // Feature 1: Update the message box for user feedback
+        const updateMessage = (message, isError = false) => {
+            messageBox.textContent = message;
+            if (isError) {
+                messageBox.style.color = '#ef4444';
+            } else {
+                messageBox.style.color = '#64748b';
+            }
+        };
+
+        // Feature 2: Populate the audio and webcam device dropdowns
+        const getMediaDevices = async () => {
+            try {
+                // Request a dummy stream to get permission to list devices
+                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
+                const videoInputDevices = devices.filter(device => device.kind === 'videoinput');
+                
+                // Populate audio dropdown
+                audioInputDevices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.label || `Microphone ${audioSourceSelect.length}`;
+                    audioSourceSelect.appendChild(option);
+                });
+
+                // Populate webcam dropdown
+                videoInputDevices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.label || `Camera ${webcamSourceSelect.length}`;
+                    webcamSourceSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error enumerating devices:', error);
+                updateMessage('Permission to access devices was denied. Some features may be unavailable.', true);
+            }
+        };
+
+        // Feature 3: Countdown timer before recording
+        const startCountdown = () => {
+            let count = 3;
+            countdownOverlay.textContent = count;
+            countdownOverlay.style.display = 'flex';
+            const countdownInterval = setInterval(() => {
+                count--;
+                countdownOverlay.textContent = count;
+                if (count === 0) {
+                    clearInterval(countdownInterval);
+                    countdownOverlay.style.display = 'none';
+                    startRecording();
+                }
+            }, 1000);
+        };
+        
+        // Feature 4: Recording timer
+        const startTimer = () => {
+            seconds = 0;
+            timerInterval = setInterval(() => {
+                seconds++;
+                const hours = String(Math.floor(seconds / 3600)).padStart(2, '0');
+                const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+                const secs = String(seconds % 60).padStart(2, '0');
+                recordingDuration.textContent = `${hours}:${minutes}:${secs}`;
+            }, 1000);
+        };
+        
+        const stopTimer = () => {
+            clearInterval(timerInterval);
+        };
+
+        // Main function to request permission and start the recording
+        const requestPermissionAndStart = async () => {
+            if (isRecordingActive) {
+                // If a recording is already in progress, show confirmation modal
+                confirmationModal.classList.add('active');
+                return;
+            }
+
+            updateMessage('Requesting permissions for screen and selected devices...');
+            
+            try {
+                // Get user's selected settings
+                const frameRate = parseInt(frameRateSelect.value);
+                const bitsPerSecond = parseInt(qualitySelect.value);
+                const audioDeviceId = audioSourceSelect.value;
+                const webcamDeviceId = webcamSourceSelect.value;
+
+                // Feature 5: Get screen stream
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        displaySurface: "monitor",
+                        frameRate: { ideal: frameRate }
+                    }
+                });
+
+                // Feature 6: Combine all streams into one
+                let tracks = [...screenStream.getTracks()];
+
+                // Feature 7: Add system audio
+                if (audioDeviceId === 'system') {
+                    // System audio is part of getDisplayMedia, so we just check for it
+                    if (screenStream.getAudioTracks().length === 0) {
+                        updateMessage('System audio is not available. Recording without audio.', true);
+                    }
+                } else if (audioDeviceId !== 'none') {
+                    // Feature 8: Add microphone audio
+                    const micStream = await navigator.mediaDevices.getUserMedia({
+                        audio: { deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined }
+                    });
+                    tracks.push(...micStream.getTracks());
+                }
+
+                // Feature 9: Add webcam overlay
+                if (webcamDeviceId !== 'none') {
+                    const webcamStream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: webcamDeviceId ? { exact: webcamDeviceId } : undefined, width: { ideal: 640 }, height: { ideal: 480 } }
+                    });
+                    webcamPreview.srcObject = webcamStream;
+                    webcamPreview.style.display = 'block';
+                } else {
+                    webcamPreview.style.display = 'none';
+                }
+                
+                // Set the main video source to the screen stream
+                videoPreview.srcObject = screenStream;
+                videoPreview.style.display = 'block';
+
+                // Feature 10: Initialize MediaRecorder with combined stream
+                mediaStream = new MediaStream(tracks);
+                mediaRecorder = new MediaRecorder(mediaStream, {
+                    mimeType: 'video/webm; codecs=vp9',
+                    bitsPerSecond: bitsPerSecond
+                });
+
+                // Recording data handling
+                recordedChunks = [];
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                // On stop, handle download and cleanup
+                mediaRecorder.onstop = () => {
+                    stopTimer();
+                    isRecordingActive = false;
+                    recordingIndicator.style.display = 'none';
+                    updateMessage('Recording stopped. You can now download the video.', false);
+                    videoContainer.style.display = 'none';
+                    downloadBtn.disabled = false;
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    drawBtn.disabled = true;
+                    drawingTools.style.display = 'none';
+                    
+                    // Stop all tracks on the stream to release resources
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    // Clear the canvas
+                    ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                };
+
+                // Update UI and start the countdown
+                startBtn.disabled = true;
+                stopBtn.disabled = true;
+                pauseBtn.disabled = true;
+                downloadBtn.disabled = true;
+                drawBtn.disabled = false;
+                videoContainer.style.display = 'block';
+                messageBox.style.display = 'none';
+                recordingDuration.style.display = 'block';
+
+                startCountdown();
+
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                updateMessage('Error: Permission was denied. Please allow access to continue.', true);
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                pauseBtn.disabled = true;
+                downloadBtn.disabled = true;
+                videoContainer.style.display = 'none';
+                messageBox.style.display = 'flex';
+            }
+        };
+
+        const startRecording = () => {
+            isRecordingActive = true;
+            mediaRecorder.start();
+            startTimer();
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            pauseBtn.disabled = false;
+            recordingIndicator.style.display = 'block';
+            updateMessage('Recording in progress...');
+        };
+        
+        // Feature 11: Pause/resume the recording
+        const pauseResumeRecording = () => {
+            if (mediaRecorder.state === 'recording') {
+                mediaRecorder.pause();
+                stopTimer();
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i> Resume';
+                recordingIndicator.style.display = 'none';
+                updateMessage('Recording paused.');
+            } else if (mediaRecorder.state === 'paused') {
+                mediaRecorder.resume();
+                startTimer();
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+                recordingIndicator.style.display = 'block';
+                updateMessage('Recording resumed...');
+            }
+        };
+
+        // Feature 12: Stop the recording
+        const stopRecording = () => {
+            if (mediaRecorder && (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused')) {
+                mediaRecorder.stop();
+                stopBtn.disabled = true;
+            }
+        };
+
+        // Feature 13: Download the recorded video
+        const downloadRecording = () => {
+            if (recordedChunks.length === 0) {
+                updateMessage('No recording to download.', true);
+                return;
+            }
+
+            const blob = new Blob(recordedChunks, {
+                type: 'video/webm'
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `screen-recording-${new Date().toISOString()}.webm`;
+            a.click();
+            
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            updateMessage('Download started. Click "Start Recording" to begin a new session.', false);
+            downloadBtn.disabled = true;
+            recordedChunks = [];
+        };
+
+        // Feature 14: Custom hotkeys
+        document.addEventListener('keydown', (e) => {
+            // Check if hotkey input is active
+            if (document.activeElement === hotkeyInput) {
+                e.preventDefault();
+                hotkeyInput.value = e.key;
+                hotkey = e.key.toLowerCase();
+            } else {
+                if (e.key.toLowerCase() === hotkey && startBtn.disabled === false) {
+                    requestPermissionAndStart();
+                } else if (e.key === ' ' && pauseBtn.disabled === false) {
+                    e.preventDefault(); // Prevents page scrolling
+                    pauseResumeRecording();
+                }
+            }
+        });
+
+        // Feature 15: Save settings to local storage
+        const saveSettings = () => {
+            const settings = {
+                frameRate: frameRateSelect.value,
+                quality: qualitySelect.value,
+                audioSource: audioSourceSelect.value,
+                webcamSource: webcamSourceSelect.value,
+                hotkey: hotkeyInput.value,
+            };
+            localStorage.setItem('recorderSettings', JSON.stringify(settings));
+            updateMessage('Settings saved!', false);
+        };
+
+        // Feature 16: Load settings from local storage
+        const loadSettings = () => {
+            const savedSettings = localStorage.getItem('recorderSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                frameRateSelect.value = settings.frameRate;
+                qualitySelect.value = settings.quality;
+                audioSourceSelect.value = settings.audioSource;
+                webcamSourceSelect.value = settings.webcamSource;
+                hotkeyInput.value = settings.hotkey;
+                hotkey = settings.hotkey.toLowerCase();
+            }
+        };
+
+        // Feature 17: Reset settings
+        const resetSettings = () => {
+            localStorage.removeItem('recorderSettings');
+            window.location.reload();
+        };
+
+        // Feature 18: Custom confirmation modal for unsaved recordings
+        modalSaveBtn.addEventListener('click', () => {
+            downloadRecording();
+            confirmationModal.classList.remove('active');
+            requestPermissionAndStart();
+        });
+        modalDiscardBtn.addEventListener('click', () => {
+            confirmationModal.classList.remove('active');
+            recordedChunks = [];
+            requestPermissionAndStart();
+        });
+        modalCancelBtn.addEventListener('click', () => {
+            confirmationModal.classList.remove('active');
+        });
+
+        // Feature 19: Drawing on screen (part 1: setup)
+        const setupDrawingCanvas = () => {
+            drawingCanvas.width = videoPreview.videoWidth;
+            drawingCanvas.height = videoPreview.videoHeight;
+            ctx.strokeStyle = drawColor;
+            ctx.lineWidth = 5;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            isDrawing = false;
+        };
+
+        // Feature 20: Drawing on screen (part 2: event listeners)
+        const draw = (e) => {
+            if (!isDrawing) return;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        };
+
+        const toggleDrawing = () => {
+            if (drawBtn.classList.contains('active')) {
+                drawBtn.classList.remove('active');
+                drawingTools.style.display = 'none';
+                drawingCanvas.removeEventListener('mousedown', handleMouseDown);
+                drawingCanvas.removeEventListener('mousemove', draw);
+                drawingCanvas.removeEventListener('mouseup', () => isDrawing = false);
+            } else {
+                drawBtn.classList.add('active');
+                drawingTools.style.display = 'flex';
+                drawingCanvas.addEventListener('mousedown', handleMouseDown);
+                drawingCanvas.addEventListener('mousemove', draw);
+                drawingCanvas.addEventListener('mouseup', () => isDrawing = false);
+            }
+        };
+        
+        const handleMouseDown = (e) => {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        };
+
+        colorPickers.forEach(picker => {
+            picker.addEventListener('click', () => {
+                colorPickers.forEach(p => p.classList.remove('active'));
+                picker.classList.add('active');
+                drawColor = picker.style.backgroundColor;
+                ctx.strokeStyle = drawColor;
+            });
+        });
+
+        // Event listeners for main buttons
+        startBtn.addEventListener('click', requestPermissionAndStart);
+        stopBtn.addEventListener('click', stopRecording);
+        pauseBtn.addEventListener('click', pauseResumeRecording);
+        downloadBtn.addEventListener('click', downloadRecording);
+        saveSettingsBtn.addEventListener('click', saveSettings);
+        resetSettingsBtn.addEventListener('click', resetSettings);
+        drawBtn.addEventListener('click', toggleDrawing);
+        videoPreview.addEventListener('loadedmetadata', setupDrawingCanvas);
+
+        // Initial setup on page load
+        getMediaDevices();
+        loadSettings();
+    </script>
+</body>
+</html>

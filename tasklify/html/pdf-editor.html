@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced PDF Editor</title>
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF-Lib, PDF.js, and Fabric.js CDNs for core functionality -->
+    <!-- pdf-lib is used for creating and saving the new PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <!-- pdf.js is used for rendering PDF pages to a canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.14.305/build/pdf.min.js"></script>
+    <!-- fabric.js is used for the interactive canvas, handling drawing and text -->
+    <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .overflow-x-hidden {
+            overflow-x: hidden;
+        }
+        /* Style for the canvas to ensure it's responsive and centered */
+        #pdfCanvas {
+            border: 2px solid #4b5563;
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        /* Custom styles for disabled buttons */
+        .disabled-button {
+            background-color: #4b5563;
+            cursor: not-allowed;
+            color: #d1d5db;
+        }
+        .disabled-button:hover {
+            background-color: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4 overflow-x-hidden">
+
+    <!-- Main Container -->
+    <div class="bg-gray-800 shadow-2xl rounded-2xl p-6 md:p-8 max-w-6xl w-full flex flex-col items-center gap-6">
+
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-emerald-400">Advanced PDF Editor</h1>
+        <p class="text-center text-gray-300 max-w-2xl">
+            Upload a PDF to view, add annotations, draw, and then save your changes. All work is done locally in your browser.
+        </p>
+
+        <!-- Control Panel -->
+        <div class="w-full flex flex-wrap justify-center items-center gap-4 p-4 rounded-lg bg-gray-700 shadow-inner">
+            <input type="file" id="pdfFileInput" accept=".pdf"
+                   class="block w-full md:w-auto text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer">
+        </div>
+
+        <!-- Editor Tools and Navigation -->
+        <div id="editor-ui" class="w-full flex flex-col md:flex-row justify-center gap-4 p-4 rounded-lg bg-gray-700 shadow-inner hidden">
+            <!-- Left: Editing Tools -->
+            <div class="flex-1 flex flex-wrap items-center gap-2">
+                <button id="addTextButton"
+                        class="p-2 md:p-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                    Add Text
+                </button>
+                <button id="drawButton"
+                        class="p-2 md:p-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+                    Draw
+                </button>
+                <div class="flex items-center space-x-2">
+                    <label for="colorPicker" class="text-gray-300">Color:</label>
+                    <input type="color" id="colorPicker" value="#000000" class="w-8 h-8 rounded-full border-2 border-gray-500 cursor-pointer">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="strokeWidth" class="text-gray-300">Size:</label>
+                    <input type="range" id="strokeWidth" min="1" max="20" value="5" class="w-24 md:w-32 cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Right: Page Navigation and Save -->
+            <div class="flex-1 flex flex-wrap items-center justify-center md:justify-end gap-2 mt-4 md:mt-0">
+                <button id="prevPageButton"
+                        class="p-2 md:p-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors">
+                    Previous
+                </button>
+                <span id="pageInfo" class="text-gray-300 font-bold px-4">
+                    Page 1 of 1
+                </span>
+                <button id="nextPageButton"
+                        class="p-2 md:p-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors">
+                    Next
+                </button>
+                <button id="savePdfButton"
+                        class="p-2 md:p-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors ml-4">
+                    Save PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas and Loading Indicator -->
+        <div id="pdfEditorWrapper" class="relative w-full max-w-full min-h-[400px]">
+            <div id="loadingIndicator" class="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 rounded-lg z-10 hidden">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-emerald-500"></div>
+            </div>
+            <!-- The canvas for rendering PDF and drawing -->
+            <canvas id="pdfCanvas" class="w-full"></canvas>
+            <div id="no-pdf-message" class="absolute inset-0 flex items-center justify-center">
+                 <p class="text-gray-400 text-xl">Upload a PDF to get started.</p>
+            </div>
+        </div>
+        
+        <!-- Message Box -->
+        <div id="messageBox" class="text-center text-sm mt-4 hidden"></div>
+    </div>
+
+    <script>
+        // Set the worker source for pdf.js. This is crucial for it to work.
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.14.305/build/pdf.worker.min.js';
+
+        (function() {
+            // Get all necessary DOM elements
+            const pdfFileInput = document.getElementById('pdfFileInput');
+            const pdfCanvas = document.getElementById('pdfCanvas');
+            const addTextButton = document.getElementById('addTextButton');
+            const drawButton = document.getElementById('drawButton');
+            const savePdfButton = document.getElementById('savePdfButton');
+            const prevPageButton = document.getElementById('prevPageButton');
+            const nextPageButton = document.getElementById('nextPageButton');
+            const pageInfoSpan = document.getElementById('pageInfo');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const messageBox = document.getElementById('messageBox');
+            const noPdfMessage = document.getElementById('no-pdf-message');
+            const editorUi = document.getElementById('editor-ui');
+            const colorPicker = document.getElementById('colorPicker');
+            const strokeWidthInput = document.getElementById('strokeWidth');
+
+            // Global variables to store the state of the application
+            let pdfjsDoc = null; // Holds the PDF.js document for rendering
+            let pdfLibDoc = null; // Holds the PDF-Lib document for saving
+            let fabricCanvas = null; // The fabric.js canvas object
+            let pageData = {}; // A dictionary to store the serialized edits for each page
+            let currentPageNum = 1;
+            let totalPages = 0;
+            let isDrawingMode = false;
+
+            // --- UI and State Management Functions ---
+
+            // Displays a message to the user
+            function showMessage(text, colorClass = 'text-yellow-400') {
+                messageBox.textContent = text;
+                messageBox.className = `text-center text-sm mt-4 ${colorClass}`;
+                messageBox.classList.remove('hidden');
+            }
+            
+            // Hides the message box
+            function clearMessage() {
+                messageBox.classList.add('hidden');
+            }
+
+            // Toggles the loading indicator and disables/enables buttons
+            function toggleLoading(show) {
+                loadingIndicator.classList.toggle('hidden', !show);
+                
+                const buttons = [addTextButton, drawButton, savePdfButton, prevPageButton, nextPageButton, pdfFileInput];
+                buttons.forEach(btn => btn.disabled = show);
+            }
+
+            // Deactivates all editing tools to prevent conflicts
+            function deactivateAllTools() {
+                if (fabricCanvas) {
+                    fabricCanvas.isDrawingMode = false;
+                    fabricCanvas.discardActiveObject().renderAll();
+                }
+                isDrawingMode = false;
+                drawButton.classList.remove('bg-purple-700');
+                drawButton.classList.add('bg-purple-600');
+            }
+
+            // --- PDF and Canvas Core Logic ---
+
+            // Loads and initializes the PDF document from a file
+            async function loadPdf(arrayBuffer) {
+                try {
+                    toggleLoading(true);
+                    clearMessage();
+                    editorUi.classList.add('hidden');
+                    noPdfMessage.classList.remove('hidden');
+                    
+                    // Use PDF.js to get the document object and its number of pages
+                    pdfjsDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    // Use PDF-Lib to get a separate document object for saving later
+                    pdfLibDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                    totalPages = pdfjsDoc.numPages;
+                    currentPageNum = 1;
+                    pageData = {};
+                    
+                    if (totalPages === 0) {
+                        throw new Error('PDF has no pages.');
+                    }
+
+                    // Initialize the Fabric.js canvas
+                    if (fabricCanvas) {
+                        fabricCanvas.dispose(); // Clean up any previous canvas
+                    }
+                    fabricCanvas = new fabric.Canvas('pdfCanvas');
+
+                    // Set initial tool properties for the canvas
+                    fabricCanvas.freeDrawingBrush.color = colorPicker.value;
+                    fabricCanvas.freeDrawingBrush.width = parseInt(strokeWidthInput.value, 10);
+                    
+                    // Render the first page of the PDF
+                    await renderPage(currentPageNum);
+                    
+                    // Show the editing UI
+                    editorUi.classList.remove('hidden');
+                    noPdfMessage.classList.add('hidden');
+                    showMessage(`PDF loaded with ${totalPages} pages.`, 'text-green-400');
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                    showMessage(`Error loading PDF: ${error.message}`, 'text-red-400');
+                    toggleLoading(false);
+                }
+            }
+
+            // Renders a specific PDF page onto the canvas
+            async function renderPage(pageNum) {
+                if (!pdfjsDoc || !fabricCanvas) return;
+                
+                toggleLoading(true);
+                deactivateAllTools();
+
+                // Save the current canvas state before navigating to a new page
+                if (currentPageNum > 0 && fabricCanvas.getObjects().length > 0) {
+                    pageData[currentPageNum] = fabricCanvas.toDatalessJSON();
+                }
+                
+                // Get the PDF page and its viewport for rendering
+                const page = await pdfjsDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1.5 });
+                
+                // Set the canvas dimensions to match the viewport
+                fabricCanvas.setWidth(viewport.width);
+                fabricCanvas.setHeight(viewport.height);
+                
+                // Create a temporary canvas to render the PDF page to
+                const tempCanvas = document.createElement('canvas');
+                const tempContext = tempCanvas.getContext('2d');
+                tempCanvas.width = viewport.width;
+                tempCanvas.height = viewport.height;
+                
+                // Render the PDF page to the temporary canvas
+                const renderTask = page.render({
+                    canvasContext: tempContext,
+                    viewport: viewport,
+                });
+                
+                await renderTask.promise;
+                
+                // Clear the main fabric canvas and set the PDF image as the background
+                fabricCanvas.clear();
+                fabricCanvas.setBackgroundImage(new fabric.Image(tempCanvas), fabricCanvas.renderAll.bind(fabricCanvas));
+                
+                // Load any saved edits for the new page from the pageData object
+                if (pageData[pageNum]) {
+                    fabricCanvas.loadFromJSON(pageData[pageNum], fabricCanvas.renderAll.bind(fabricCanvas));
+                }
+
+                // Update state variables and UI
+                currentPageNum = pageNum;
+                pageInfoSpan.textContent = `Page ${currentPageNum} of ${totalPages}`;
+                updateNavigationButtons();
+                toggleLoading(false);
+            }
+            
+            // Updates the state of the "Previous" and "Next" buttons
+            function updateNavigationButtons() {
+                prevPageButton.disabled = currentPageNum <= 1;
+                nextPageButton.disabled = currentPageNum >= totalPages;
+                
+                prevPageButton.classList.toggle('disabled-button', prevPageButton.disabled);
+                nextPageButton.classList.toggle('disabled-button', nextPageButton.disabled);
+            }
+
+            // --- Tool Functions ---
+
+            // Adds a new text box to the canvas
+            function addText() {
+                if (!fabricCanvas) return;
+                
+                deactivateAllTools();
+
+                const text = new fabric.IText('Double-click to edit', {
+                    left: 50,
+                    top: 50,
+                    fontFamily: 'Inter',
+                    fontSize: 20,
+                    fill: colorPicker.value
+                });
+                
+                fabricCanvas.add(text);
+                fabricCanvas.setActiveObject(text);
+                fabricCanvas.renderAll();
+                showMessage('Text mode active. Double-click text to edit.', 'text-blue-400');
+            }
+
+            // Toggles the drawing mode for freehand drawing
+            function toggleDrawingMode() {
+                if (!fabricCanvas) return;
+                
+                isDrawingMode = !isDrawingMode;
+                fabricCanvas.isDrawingMode = isDrawingMode;
+                
+                if (isDrawingMode) {
+                    fabricCanvas.freeDrawingBrush.color = colorPicker.value;
+                    fabricCanvas.freeDrawingBrush.width = parseInt(strokeWidthInput.value, 10);
+                    showMessage('Drawing mode active. Click and drag to draw.', 'text-purple-400');
+                } else {
+                    showMessage('Drawing mode off.', 'text-gray-400');
+                }
+                
+                drawButton.classList.toggle('bg-purple-700', isDrawingMode);
+                drawButton.classList.toggle('bg-purple-600', !isDrawingMode);
+            }
+
+            // --- Final Save Function ---
+            
+            // This function merges all edits into a new PDF and triggers a download
+            async function savePdf() {
+                if (!pdfjsDoc || !fabricCanvas) {
+                    showMessage('Please load a PDF first.', 'text-yellow-400');
+                    return;
+                }
+                
+                try {
+                    toggleLoading(true);
+                    clearMessage();
+
+                    // Save the state of the current page before starting the save process
+                    pageData[currentPageNum] = fabricCanvas.toDatalessJSON();
+                    
+                    // Create a new PDF document using PDF-Lib
+                    const newPdfDoc = await PDFLib.PDFDocument.create();
+                    
+                    // Iterate through each page of the original PDF
+                    for (let i = 0; i < totalPages; i++) {
+                        const pageNum = i + 1;
+                        
+                        // Use PDF.js to get the original page and its dimensions
+                        const page = await pdfjsDoc.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        
+                        // Create a temporary canvas to render the base PDF page
+                        const tempRenderCanvas = document.createElement('canvas');
+                        const tempRenderContext = tempRenderCanvas.getContext('2d');
+                        tempRenderCanvas.width = viewport.width;
+                        tempRenderCanvas.height = viewport.height;
+                        
+                        await page.render({
+                            canvasContext: tempRenderContext,
+                            viewport: viewport
+                        }).promise;
+
+                        // Create a new temporary Fabric.js canvas to layer the edits
+                        const tempFabricCanvas = new fabric.Canvas(null, {
+                            width: viewport.width,
+                            height: viewport.height,
+                            backgroundColor: 'white'
+                        });
+                        
+                        tempFabricCanvas.setBackgroundImage(new fabric.Image(tempRenderCanvas), tempFabricCanvas.renderAll.bind(tempFabricCanvas));
+                        
+                        // Load the saved edits for this specific page
+                        if (pageData[pageNum]) {
+                             await new Promise(resolve => {
+                                tempFabricCanvas.loadFromJSON(pageData[pageNum], () => {
+                                    tempFabricCanvas.renderAll();
+                                    resolve();
+                                });
+                            });
+                        }
+                        
+                        // Get the final merged image of the page
+                        const pageImagePng = tempFabricCanvas.toDataURL({
+                            format: 'png',
+                            quality: 1.0
+                        });
+                        
+                        // Embed this image into the new PDF document
+                        const embeddedImage = await newPdfDoc.embedPng(pageImagePng);
+                        const { width, height } = embeddedImage.scale(1.0);
+                        
+                        // Add a new page to the final PDF and draw the embedded image
+                        const newPage = newPdfDoc.addPage([width, height]);
+                        newPage.drawImage(embeddedImage, {
+                            x: 0,
+                            y: 0,
+                            width: width,
+                            height: height,
+                        });
+                        
+                        tempRenderCanvas.remove(); // Clean up temporary canvas from memory
+                    }
+
+                    // Save the final PDF and create a download link
+                    const pdfBytes = await newPdfDoc.save();
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'edited_document.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    URL.revokeObjectURL(url);
+                    
+                    showMessage('PDF saved successfully!', 'text-emerald-400');
+                    
+                } catch (error) {
+                    console.error('Error saving PDF:', error);
+                    showMessage(`Error saving PDF: ${error.message}`, 'text-red-400');
+                } finally {
+                    toggleLoading(false);
+                }
+            }
+            
+            // --- Event Listeners and Initial Setup ---
+
+            // Handles the file input for PDF upload
+            pdfFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file && file.type === 'application/pdf') {
+                    const reader = new FileReader();
+                    reader.onload = (e) => loadPdf(e.target.result);
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    showMessage('Please select a valid PDF file.', 'text-red-400');
+                }
+            });
+
+            // Navigates to the previous page
+            prevPageButton.addEventListener('click', () => {
+                if (currentPageNum > 1) {
+                    renderPage(currentPageNum - 1);
+                }
+            });
+            
+            // Navigates to the next page
+            nextPageButton.addEventListener('click', () => {
+                if (currentPageNum < totalPages) {
+                    renderPage(currentPageNum + 1);
+                }
+            });
+
+            addTextButton.addEventListener('click', addText);
+            drawButton.addEventListener('click', toggleDrawingMode);
+            savePdfButton.addEventListener('click', savePdf);
+
+            // Updates the color for active objects or drawing brush
+            colorPicker.addEventListener('input', (event) => {
+                if (fabricCanvas) {
+                    const activeObject = fabricCanvas.getActiveObject();
+                    if (activeObject) {
+                        if (activeObject.type === 'i-text') {
+                            activeObject.set('fill', event.target.value);
+                        } else {
+                            activeObject.set('stroke', event.target.value);
+                        }
+                        fabricCanvas.renderAll();
+                    } else if (isDrawingMode) {
+                         fabricCanvas.freeDrawingBrush.color = event.target.value;
+                    }
+                }
+            });
+            
+            // Updates the stroke width for the drawing brush
+            strokeWidthInput.addEventListener('input', (event) => {
+                 if (fabricCanvas && isDrawingMode) {
+                    fabricCanvas.freeDrawingBrush.width = parseInt(event.target.value, 10);
+                 }
+            });
+
+            // Initial setup on window load
+            window.onload = () => {
+                // Hide editor UI until a PDF is loaded
+                editorUi.classList.add('hidden');
+                toggleLoading(false);
+            };
+        })();
+    </script>
+</body>
+</html>

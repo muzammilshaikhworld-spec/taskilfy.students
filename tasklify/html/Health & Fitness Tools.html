@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health & Fitness Tools</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .tool-card {
+            @apply bg-white p-6 rounded-xl shadow-lg border border-gray-200 transition-all duration-300 ease-in-out hover:shadow-xl;
+        }
+        .tool-card h2 {
+            @apply text-2xl font-bold text-gray-800 mb-4;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl mx-auto space-y-8">
+        <header class="text-center">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Health & Fitness Tools</h1>
+            <p class="text-lg text-gray-600">A collection of calculators to help you track your health metrics.</p>
+            <div class="mt-6 p-4 bg-yellow-100 rounded-lg text-left">
+                <p class="text-sm font-medium text-yellow-800">
+                    <span class="font-bold">Disclaimer:</span> These metrics are general estimates. For personalized health advice, please consult a professional.
+                </p>
+            </div>
+        </header>
+
+        <!-- BMI Calculator Section -->
+        <div class="tool-card" id="bmi-tool">
+            <h2>Body Mass Index (BMI)</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="bmi-height" class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                    <input type="number" id="bmi-height" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 175.5" min="1" step="0.1" required>
+                </div>
+                <div>
+                    <label for="bmi-weight" class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                    <input type="number" id="bmi-weight" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 70.2" min="1" step="0.1" required>
+                </div>
+                <button id="calculate-bmi-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    Calculate BMI
+                </button>
+            </div>
+            <div id="bmi-result" class="mt-4 p-4 bg-gray-100 rounded-lg text-center hidden">
+                <p class="text-xl font-semibold text-gray-800">Your BMI: <span id="bmi-value" class="text-blue-600"></span></p>
+                <p class="text-lg font-medium text-gray-600">Category: <span id="bmi-category" class="font-bold"></span></p>
+            </div>
+        </div>
+
+        <!-- BMR Calculator Section -->
+        <div class="tool-card" id="bmr-tool">
+            <h2>Basal Metabolic Rate (BMR)</h2>
+            <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="w-full sm:w-1/2">
+                        <label for="bmr-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <select id="bmr-gender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-1/2">
+                        <label for="bmr-age" class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                        <input type="number" id="bmr-age" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 30" min="1" required>
+                    </div>
+                </div>
+                <div>
+                    <label for="bmr-height" class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                    <input type="number" id="bmr-height" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 175.5" min="1" step="0.1" required>
+                </div>
+                <div>
+                    <label for="bmr-weight" class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                    <input type="number" id="bmr-weight" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 70.2" min="1" step="0.1" required>
+                </div>
+                <button id="calculate-bmr-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    Calculate BMR
+                </button>
+            </div>
+            <div id="bmr-result" class="mt-4 p-4 bg-gray-100 rounded-lg text-center hidden">
+                <p class="text-xl font-semibold text-gray-800">Your BMR: <span id="bmr-value" class="text-blue-600"></span> calories/day</p>
+            </div>
+        </div>
+
+        <!-- Body Fat Calculator Section (U.S. Navy Method) -->
+        <div class="tool-card" id="bodyfat-tool">
+            <h2>Body Fat Percentage</h2>
+            <p class="text-sm text-gray-500 mb-4">U.S. Navy Method</p>
+            <div class="space-y-4">
+                <div>
+                    <label for="bf-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                    <select id="bf-gender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="bf-height" class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                    <input type="number" id="bf-height" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 175.5" min="1" step="0.1" required>
+                </div>
+                <div>
+                    <label for="bf-waist" class="block text-sm font-medium text-gray-700 mb-1">Waist Circumference (cm)</label>
+                    <input type="number" id="bf-waist" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 85" min="1" step="0.1" required>
+                </div>
+                <div>
+                    <label for="bf-neck" class="block text-sm font-medium text-gray-700 mb-1">Neck Circumference (cm)</label>
+                    <input type="number" id="bf-neck" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 40" min="1" step="0.1" required>
+                </div>
+                <div id="bf-hip-container">
+                    <label for="bf-hip" class="block text-sm font-medium text-gray-700 mb-1">Hip Circumference (cm)</label>
+                    <input type="number" id="bf-hip" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 95" min="1" step="0.1" required>
+                </div>
+                <button id="calculate-bodyfat-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    Calculate Body Fat
+                </button>
+            </div>
+            <div id="bodyfat-result" class="mt-4 p-4 bg-gray-100 rounded-lg text-center hidden">
+                <p class="text-xl font-semibold text-gray-800">Body Fat: <span id="bodyfat-value" class="text-blue-600"></span>%</p>
+            </div>
+        </div>
+
+        <!-- Ideal Weight Section -->
+        <div class="tool-card" id="ideal-weight-tool">
+            <h2>Ideal Weight</h2>
+            <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="w-full sm:w-1/2">
+                        <label for="iw-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <select id="iw-gender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-1/2">
+                        <label for="iw-height" class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                        <input type="number" id="iw-height" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 175.5" min="1" step="0.1" required>
+                    </div>
+                </div>
+                <button id="calculate-iw-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    Calculate Ideal Weight
+                </button>
+            </div>
+            <div id="iw-result" class="mt-4 p-4 bg-gray-100 rounded-lg text-center hidden">
+                <p class="text-xl font-semibold text-gray-800">Ideal Weight: <span id="iw-value" class="text-blue-600"></span> kg</p>
+            </div>
+        </div>
+
+        <!-- Message Box for Alerts -->
+        <div id="messageBox" class="mt-4 p-3 bg-red-100 text-red-700 border-l-4 border-red-500 rounded-lg hidden" role="alert">
+            <p id="messageText"></p>
+        </div>
+    </div>
+
+    <script>
+        const showMessage = (message) => {
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+        };
+
+        const hideMessage = () => {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.classList.add('hidden');
+        };
+
+        const getBmiCategory = (bmi) => {
+            if (bmi < 18.5) return { text: 'Underweight', color: 'text-yellow-600' };
+            if (bmi < 24.9) return { text: 'Normal weight', color: 'text-green-600' };
+            if (bmi < 29.9) return { text: 'Overweight', color: 'text-orange-600' };
+            return { text: 'Obesity', color: 'text-red-600' };
+        };
+
+        const calculateBMI = (height, weight) => {
+            const heightInMeters = height / 100;
+            return weight / (heightInMeters * heightInMeters);
+        };
+
+        const calculateBMR = (gender, weight, height, age) => {
+            if (gender === 'male') {
+                return (10 * weight) + (6.25 * height) - (5 * age) + 5;
+            } else {
+                return (10 * weight) + (6.25 * height) - (5 * age) - 161;
+            }
+        };
+
+        const calculateIdealWeight = (gender, height) => {
+            const heightInInches = height / 2.54;
+            const heightOver5Feet = heightInInches - 60;
+            if (heightInInches <= 60) {
+                 return gender === 'male' ? 50 : 45.5;
+            } else {
+                 return gender === 'male' 
+                    ? 50 + (2.3 * heightOver5Feet) 
+                    : 45.5 + (2.3 * heightOver5Feet);
+            }
+        };
+
+        const calculateBodyFat = (gender, height, waist, neck, hip) => {
+            if (gender === 'male') {
+                // U.S. Navy Method for Males:
+                // 495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(height)) - 450
+                // Convert cm to inches for the formula
+                const heightInInches = height / 2.54;
+                const waistInInches = waist / 2.54;
+                const neckInInches = neck / 2.54;
+                return (495 / (1.0324 - 0.19077 * Math.log10(waistInInches - neckInInches) + 0.15456 * Math.log10(heightInInches))) - 450;
+            } else { // female
+                // U.S. Navy Method for Females:
+                // 495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(height)) - 450
+                // Convert cm to inches for the formula
+                const heightInInches = height / 2.54;
+                const waistInInches = waist / 2.54;
+                const neckInInches = neck / 2.54;
+                const hipInInches = hip / 2.54;
+                return (495 / (1.29579 - 0.35004 * Math.log10(waistInInches + hipInInches - neckInInches) + 0.22100 * Math.log10(heightInInches))) - 450;
+            }
+        };
+
+        // Event listeners for each tool
+        document.getElementById('calculate-bmi-btn').addEventListener('click', () => {
+            hideMessage();
+            try {
+                const height = parseFloat(document.getElementById('bmi-height').value);
+                const weight = parseFloat(document.getElementById('bmi-weight').value);
+                if (isNaN(height) || isNaN(weight) || height <= 0 || weight <= 0) {
+                    showMessage('Please enter valid positive numbers for height and weight.');
+                    document.getElementById('bmi-result').classList.add('hidden');
+                    return;
+                }
+                const bmi = calculateBMI(height, weight);
+                const category = getBmiCategory(bmi);
+                document.getElementById('bmi-value').textContent = bmi.toFixed(2);
+                document.getElementById('bmi-category').textContent = category.text;
+                document.getElementById('bmi-category').className = `font-bold ${category.color}`;
+                document.getElementById('bmi-result').classList.remove('hidden');
+            } catch (error) {
+                showMessage('An error occurred. Please check your inputs.');
+                console.error(error);
+            }
+        });
+
+        document.getElementById('calculate-bmr-btn').addEventListener('click', () => {
+            hideMessage();
+            try {
+                const gender = document.getElementById('bmr-gender').value;
+                const age = parseFloat(document.getElementById('bmr-age').value);
+                const height = parseFloat(document.getElementById('bmr-height').value);
+                const weight = parseFloat(document.getElementById('bmr-weight').value);
+                if (isNaN(age) || isNaN(height) || isNaN(weight) || age <= 0 || height <= 0 || weight <= 0) {
+                    showMessage('Please enter valid positive numbers for age, height, and weight.');
+                    document.getElementById('bmr-result').classList.add('hidden');
+                    return;
+                }
+                const bmr = calculateBMR(gender, weight, height, age);
+                document.getElementById('bmr-value').textContent = Math.round(bmr);
+                document.getElementById('bmr-result').classList.remove('hidden');
+            } catch (error) {
+                showMessage('An error occurred. Please check your inputs.');
+                console.error(error);
+            }
+        });
+
+        document.getElementById('calculate-bodyfat-btn').addEventListener('click', () => {
+            hideMessage();
+            try {
+                const gender = document.getElementById('bf-gender').value;
+                const height = parseFloat(document.getElementById('bf-height').value);
+                const waist = parseFloat(document.getElementById('bf-waist').value);
+                const neck = parseFloat(document.getElementById('bf-neck').value);
+                let hip = 0;
+                if (gender === 'female') {
+                    hip = parseFloat(document.getElementById('bf-hip').value);
+                    if (isNaN(hip) || hip <= 0) {
+                        showMessage('Please enter a valid positive number for hip circumference.');
+                        document.getElementById('bodyfat-result').classList.add('hidden');
+                        return;
+                    }
+                }
+                if (isNaN(height) || isNaN(waist) || isNaN(neck) || height <= 0 || waist <= 0 || neck <= 0) {
+                    showMessage('Please enter valid positive numbers for all measurements.');
+                    document.getElementById('bodyfat-result').classList.add('hidden');
+                    return;
+                }
+                const bodyFat = calculateBodyFat(gender, height, waist, neck, hip);
+                document.getElementById('bodyfat-value').textContent = bodyFat.toFixed(2);
+                document.getElementById('bodyfat-result').classList.remove('hidden');
+            } catch (error) {
+                showMessage('An error occurred. Please check your inputs.');
+                console.error(error);
+            }
+        });
+
+        document.getElementById('calculate-iw-btn').addEventListener('click', () => {
+            hideMessage();
+            try {
+                const gender = document.getElementById('iw-gender').value;
+                const height = parseFloat(document.getElementById('iw-height').value);
+                if (isNaN(height) || height <= 0) {
+                    showMessage('Please enter a valid positive number for height.');
+                    document.getElementById('iw-result').classList.add('hidden');
+                    return;
+                }
+                const idealWeight = calculateIdealWeight(gender, height);
+                document.getElementById('iw-value').textContent = idealWeight.toFixed(1);
+                document.getElementById('iw-result').classList.remove('hidden');
+            } catch (error) {
+                showMessage('An error occurred. Please check your inputs.');
+                console.error(error);
+            }
+        });
+        
+        // Hide/Show hip input based on gender for Body Fat Calculator
+        document.getElementById('bf-gender').addEventListener('change', (e) => {
+            const hipContainer = document.getElementById('bf-hip-container');
+            if (e.target.value === 'male') {
+                hipContainer.classList.add('hidden');
+            } else {
+                hipContainer.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

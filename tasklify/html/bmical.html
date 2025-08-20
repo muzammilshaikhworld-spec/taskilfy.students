@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Health Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-4 text-gray-800">Comprehensive Health Calculator</h1>
+        <p class="text-center text-sm text-gray-500 mb-6">
+            Calculate your BMI, BMR, and Ideal Weight using standard formulas.
+        </p>
+
+        <div class="space-y-4">
+            <!-- Gender and Age Inputs -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="w-full sm:w-1/2">
+                    <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                    <select id="gender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <div class="w-full sm:w-1/2">
+                    <label for="age" class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                    <input type="number" id="age" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" placeholder="e.g., 30" min="1" required>
+                </div>
+            </div>
+
+            <!-- Height and Weight Inputs -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="w-full sm:w-1/2">
+                    <label for="height" class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                    <input type="number" id="height" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" placeholder="e.g., 175.5" min="1" step="0.1" required>
+                </div>
+                <div class="w-full sm:w-1/2">
+                    <label for="weight" class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                    <input type="number" id="weight" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" placeholder="e.g., 70.2" min="1" step="0.1" required>
+                </div>
+            </div>
+            
+            <!-- Calculate Button -->
+            <button id="calculateBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-150 ease-in-out">
+                Calculate All
+            </button>
+        </div>
+
+        <!-- Result Display Area -->
+        <div id="resultsContainer" class="mt-6 space-y-4 hidden">
+            <!-- Disclaimer -->
+            <div class="p-4 bg-yellow-100 rounded-lg">
+                <p class="text-sm font-medium text-yellow-800">
+                    <span class="font-bold">Disclaimer:</span> These metrics are general estimates based on population averages. They do not account for individual factors like muscle mass, body fat percentage, or bone density. Always consult with a healthcare professional for personalized health advice.
+                </p>
+            </div>
+            <!-- BMI Result -->
+            <div class="p-4 bg-gray-100 rounded-lg text-center">
+                <p class="text-xl font-semibold text-gray-800">BMI: <span id="bmiValue" class="text-blue-600"></span></p>
+                <p class="text-lg font-medium text-gray-600">Category: <span id="bmiCategory" class="font-bold"></span></p>
+            </div>
+            
+            <!-- BMR Result -->
+            <div class="p-4 bg-gray-100 rounded-lg text-center">
+                <p class="text-xl font-semibold text-gray-800">BMR: <span id="bmrValue" class="text-blue-600"></span> calories/day</p>
+                <p class="text-sm text-gray-500">
+                    Your Basal Metabolic Rate (BMR) is the number of calories your body needs to perform basic, life-sustaining functions at rest.
+                </p>
+            </div>
+
+            <!-- Ideal Weight Result -->
+            <div class="p-4 bg-gray-100 rounded-lg text-center">
+                <p class="text-xl font-semibold text-gray-800">Ideal Weight: <span id="idealWeightValue" class="text-blue-600"></span> kg</p>
+                <p class="text-sm text-gray-500">
+                    This is an estimated healthy weight range based on your height and gender, using the Hamwi method.
+                </p>
+            </div>
+        </div>
+
+        <!-- Message Box for Alerts -->
+        <div id="messageBox" class="mt-4 p-3 bg-red-100 text-red-700 border-l-4 border-red-500 rounded-lg hidden" role="alert">
+            <p id="messageText"></p>
+        </div>
+    </div>
+
+    <script>
+        // Get references to all the necessary DOM elements
+        const genderSelect = document.getElementById('gender');
+        const ageInput = document.getElementById('age');
+        const heightInput = document.getElementById('height');
+        const weightInput = document.getElementById('weight');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const bmiValueSpan = document.getElementById('bmiValue');
+        const bmiCategorySpan = document.getElementById('bmiCategory');
+        const bmrValueSpan = document.getElementById('bmrValue');
+        const idealWeightValueSpan = document.getElementById('idealWeightValue');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+
+        // Function to show a message in the message box
+        const showMessage = (message) => {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+        };
+
+        // Function to hide the message box
+        const hideMessage = () => {
+            messageBox.classList.add('hidden');
+        };
+
+        // Function to determine the BMI category
+        const getBmiCategory = (bmi) => {
+            if (bmi < 18.5) {
+                return { text: 'Underweight', color: 'text-yellow-600' };
+            } else if (bmi >= 18.5 && bmi < 24.9) {
+                return { text: 'Normal weight', color: 'text-green-600' };
+            } else if (bmi >= 25 && bmi < 29.9) {
+                return { text: 'Overweight', color: 'text-orange-600' };
+            } else {
+                return { text: 'Obesity', color: 'text-red-600' };
+            }
+        };
+
+        // Function to calculate Basal Metabolic Rate (BMR) using the Mifflin-St Jeor equation
+        const calculateBMR = (gender, weight, height, age) => {
+            let bmr;
+            // Mifflin-St Jeor Equation
+            if (gender === 'male') {
+                bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+            } else { // female
+                bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+            }
+            return bmr;
+        };
+
+        // Function to calculate Ideal Body Weight (Hamwi method approximation)
+        const calculateIdealWeight = (gender, height) => {
+            const heightInInches = height / 2.54;
+            const heightOver5Feet = heightInInches - 60; // 5 feet = 60 inches
+            
+            let idealWeight;
+            if (heightInInches <= 60) {
+                 idealWeight = gender === 'male' ? 50 : 45.5; // Base weight for 5 feet tall
+            } else {
+                 idealWeight = gender === 'male' 
+                    ? 50 + (2.3 * heightOver5Feet) // For every inch over 5 feet
+                    : 45.5 + (2.3 * heightOver5Feet);
+            }
+            return idealWeight;
+        };
+
+        // Event listener for the calculate button
+        calculateBtn.addEventListener('click', () => {
+            try {
+                // Hide any previous messages and results
+                hideMessage();
+                resultsContainer.classList.add('hidden');
+
+                // Get the input values and convert to numbers
+                const gender = genderSelect.value;
+                const age = parseFloat(ageInput.value);
+                const height = parseFloat(heightInput.value);
+                const weight = parseFloat(weightInput.value);
+
+                // Check for valid inputs
+                if (isNaN(height) || isNaN(weight) || isNaN(age) || height <= 0 || weight <= 0 || age <= 0) {
+                    showMessage('Please enter valid positive numbers for all fields.');
+                    return;
+                }
+
+                // --- Perform all calculations ---
+                
+                // 1. Calculate BMI
+                const heightInMeters = height / 100;
+                const bmi = weight / (heightInMeters * heightInMeters);
+                const bmiCategory = getBmiCategory(bmi);
+
+                // 2. Calculate BMR
+                const bmr = calculateBMR(gender, weight, height, age);
+
+                // 3. Calculate Ideal Weight
+                const idealWeight = calculateIdealWeight(gender, height);
+
+                // --- Display the results ---
+
+                // Display BMI
+                bmiValueSpan.textContent = bmi.toFixed(2);
+                bmiCategorySpan.textContent = bmiCategory.text;
+                bmiCategorySpan.className = `font-bold ${bmiCategory.color}`;
+                
+                // Display BMR
+                bmrValueSpan.textContent = Math.round(bmr);
+
+                // Display Ideal Weight
+                idealWeightValueSpan.textContent = idealWeight.toFixed(1);
+                
+                // Show the results container
+                resultsContainer.classList.remove('hidden');
+
+            } catch (error) {
+                showMessage('An error occurred during calculation. Please try again.');
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

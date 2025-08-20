@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Advanced Mini Word Processor</title>
+
+<style>
+  /* === Dark and Light Mode Setup === */
+  :root {
+    --bg-dark: #000000;
+    --bg-dark2: #001a00;
+    --bg-dark3: #003300;
+    --text-light: #00ff00;
+    --border-dark: #004d00;
+    --btn-bg-dark: #002200;
+    --btn-hover: #004d00;
+
+    --bg-light: #fafafa;
+    --bg-light2: #ddd;
+    --bg-light3: #fff;
+    --text-dark: #222;
+    --border-light: #ccc;
+    --btn-bg-light: #eee;
+    --btn-hover-light: #ccc;
+  }
+  body.dark {
+    background: var(--bg-dark);
+    color: var(--text-light);
+  }
+  body.light {
+    background: var(--bg-light);
+    color: var(--text-dark);
+  }
+
+  body {
+    margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column;
+    font-family: Arial, sans-serif;
+  }
+  body.dark header,
+  body.dark #toolbar,
+  body.dark #statusbar {
+    background: var(--bg-dark2);
+    color: var(--text-light);
+    border-color: var(--border-dark);
+  }
+  body.light header,
+  body.light #toolbar,
+  body.light #statusbar {
+    background: var(--bg-light2);
+    color: var(--text-dark);
+    border-color: var(--border-light);
+  }
+
+  header {
+    padding: 10px 20px;
+    font-size: 20px;
+    user-select: none;
+    border-bottom: 1px solid;
+  }
+
+  #toolbar {
+    padding: 8px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+    border-bottom: 1px solid;
+  }
+  #toolbar button, #toolbar select, #toolbar input[type=color] {
+    font-size: 14px;
+    padding: 6px 8px;
+    cursor: pointer;
+    border: 1px solid;
+    border-radius: 4px;
+    transition: background 0.2s;
+    background: var(--btn-bg-dark);
+    color: var(--text-light);
+  }
+  body.light #toolbar button,
+  body.light #toolbar select,
+  body.light #toolbar input[type=color] {
+    background: var(--btn-bg-light);
+    color: var(--text-dark);
+    border-color: var(--border-light);
+  }
+  #toolbar button:hover {
+    background: var(--btn-hover);
+  }
+  body.light #toolbar button:hover {
+    background: var(--btn-hover-light);
+  }
+  #toolbar select {
+    background: var(--btn-bg-dark);
+    color: var(--text-light);
+  }
+  body.light #toolbar select {
+    background: var(--btn-bg-light);
+    color: var(--text-dark);
+  }
+  #toolbar input[type=color] {
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    border: none;
+  }
+  #editor-container {
+    flex-grow: 1;
+    padding: 20px;
+    overflow: auto;
+    background: var(--bg-dark3);
+  }
+  body.light #editor-container {
+    background: var(--bg-light3);
+  }
+  #editor {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    outline: none;
+    border: 1px solid var(--border-dark);
+    padding: 15px;
+    box-sizing: border-box;
+    background: var(--bg-dark3);
+    color: var(--text-light);
+    resize: none;
+    font-size: 12pt;
+  }
+  body.light #editor {
+    background: var(--bg-light3);
+    color: var(--text-dark);
+    border-color: var(--border-light);
+  }
+
+  #statusbar {
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #0f0;
+    display: flex; justify-content: space-between;
+    border-top: 1px solid;
+  }
+  body.light #statusbar {
+    color: #555;
+    border-color: var(--border-light);
+  }
+
+  #findReplaceContainer {
+    position: fixed;
+    top: 60px; right: 20px;
+    background: var(--btn-bg-dark);
+    border: 1px solid #004d00;
+    padding: 10px;
+    box-shadow: 0 0 10px rgba(0,255,0,0.8);
+    border-radius: 6px;
+    display: none;
+    z-index: 100;
+    color: var(--text-light);
+    width: 320px;
+  }
+  body.light #findReplaceContainer {
+    background: var(--btn-bg-light);
+    color: var(--text-dark);
+    border-color: var(--border-light);
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+  }
+  #findReplaceContainer input {
+    width: 140px;
+    margin-right: 6px;
+    padding: 4px 6px;
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    background: #002200;
+    color: #00ff00;
+  }
+  body.light #findReplaceContainer input {
+    background: #fff;
+    color: #000;
+    border-color: var(--border-light);
+  }
+  #findReplaceContainer button {
+    background: #004d00;
+    border: 1px solid #007700;
+    color: #0f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 4px;
+  }
+  body.light #findReplaceContainer button {
+    background: var(--btn-bg-light);
+    border-color: var(--border-light);
+    color: var(--text-dark);
+  }
+  #findReplaceContainer button:hover {
+    background: #007700;
+  }
+  body.light #findReplaceContainer button:hover {
+    background: var(--btn-hover-light);
+  }
+  table {
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #004d00;
+    padding: 4px 8px;
+    color: var(--text-light);
+  }
+  body.light table, body.light th, body.light td {
+    border-color: var(--border-light);
+    color: var(--text-dark);
+  }
+
+  /* Print Layout Mode */
+  #editor.print-layout {
+    max-width: 8.5in;
+    margin: 0 auto;
+    box-shadow: 0 0 8px rgba(0,255,0,0.7);
+    padding: 1in;
+    background: var(--bg-dark3);
+    color: var(--text-light);
+  }
+  body.light #editor.print-layout {
+    background: var(--bg-light3);
+    color: var(--text-dark);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    #toolbar {
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    #toolbar button,
+    #toolbar select,
+    #toolbar input[type=color] {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    #editor-container {
+      padding: 10px;
+    }
+
+    #editor {
+      min-height: 300px;
+      font-size: 16pt;
+    }
+
+    header {
+      font-size: 18px;
+      padding: 12px 15px;
+    }
+
+    #statusbar {
+      flex-direction: column;
+      font-size: 14px;
+      gap: 4px;
+      padding: 8px 12px;
+    }
+  }
+
+  @media (max-width: 400px) {
+    #toolbar {
+      padding: 8px 6px;
+    }
+
+    #toolbar button,
+    #toolbar select,
+    #toolbar input[type=color] {
+      font-size: 12px;
+      padding: 6px 4px;
+    }
+
+    #editor {
+      font-size: 14pt;
+    }
+
+    header {
+      font-size: 16px;
+      padding: 10px 12px;
+    }
+  }
+
+  /* Print only editor content */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #editor, #editor * {
+      visibility: visible;
+    }
+    #editor {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      max-width: none;
+      box-shadow: none;
+      margin: 0;
+      padding: 1in;
+      background: black;
+      color: lime;
+    }
+  }
+</style>
+
+</head>
+<body class="dark">
+
+<header>Advanced Mini Word Processor</header>
+
+<div id="toolbar" aria-label="Text formatting toolbar">
+
+  <!-- Basic text styling -->
+  <button title="Undo (Ctrl+Z)" onclick="execCmd('undo')" type="button">↺ Undo</button>
+  <button title="Redo (Ctrl+Y)" onclick="execCmd('redo')" type="button">↻ Redo</button>
+  <button title="Copy (Ctrl+C)" onclick="copyText()" type="button">📋 Copy</button>
+  <button title="Paste (Ctrl+V)" onclick="pasteText()" type="button">📥 Paste</button>
+  <button title="Cut (Ctrl+X)" onclick="execCmd('cut')" type="button">✂ Cut</button>
+
+  <button title="Bold (Ctrl+B)" onclick="execCmd('bold')" type="button"><b>B</b></button>
+  <button title="Italic (Ctrl+I)" onclick="execCmd('italic')" type="button"><i>I</i></button>
+  <button title="Underline (Ctrl+U)" onclick="execCmd('underline')" type="button"><u>U</u></button>
+  <button title="Strike Through" onclick="execCmd('strikeThrough')" type="button"><s>S</s></button>
+
+  <select id="fontName" title="Font Family" onchange="execCmd('fontName', this.value)">
+    <option value="" disabled selected>Font Family</option>
+    <option value="Arial">Arial</option>
+    <option value="Courier New">Courier New</option>
+    <option value="Georgia">Georgia</option>
+    <option value="Tahoma">Tahoma</option>
+    <option value="Times New Roman">Times New Roman</option>
+    <option value="Verdana">Verdana</option>
+  </select>
+
+  <select id="fontSize" title="Font Size" onchange="execCmd('fontSize', this.value)">
+    <option value="" disabled selected>Font Size</option>
+    <option value="1">8pt</option>
+    <option value="2">10pt</option>
+    <option value="3" selected>12pt</option>
+    <option value="4">14pt</option>
+    <option value="5">18pt</option>
+    <option value="6">24pt</option>
+    <option value="7">36pt</option>
+  </select>
+
+  <input type="color" id="fontColor" title="Font Color" onchange="execCmd('foreColor', this.value)" />
+  <input type="color" id="highlightColor" title="Highlight Color" onchange="execCmd('hiliteColor', this.value)" />
+
+  <button title="Align Left" onclick="execCmd('justifyLeft')" type="button">🡸</button>
+  <button title="Center" onclick="execCmd('justifyCenter')" type="button">🡺🡸</button>
+  <button title="Align Right" onclick="execCmd('justifyRight')" type="button">🡺</button>
+  <button title="Justify" onclick="execCmd('justifyFull')" type="button">☰</button>
+
+  <button title="Insert Unordered List" onclick="execCmd('insertUnorderedList')" type="button">• List</button>
+  <button title="Insert Ordered List" onclick="execCmd('insertOrderedList')" type="button">1. List</button>
+
+  <button title="Insert Horizontal Line" onclick="execCmd('insertHorizontalRule')" type="button">― HR</button>
+
+  <button title="Insert Link" onclick="insertLink()" type="button">🔗 Link</button>
+  <button title="Insert Image" onclick="insertImage()" type="button">🖼️ Image</button>
+
+  <button title="Clear Formatting" onclick="clearFormatting()" type="button">✖ Clear</button>
+
+  <button title="Insert Date/Time" onclick="insertDateTime()" type="button">📅 Date/Time</button>
+
+  <button title="Find & Replace" onclick="toggleFindReplace()">Find/Replace</button>
+
+  <button title="Toggle Spellcheck" onclick="toggleSpellcheck()">Spellcheck</button>
+
+  <button title="Zoom In" onclick="zoomEditor(1.1)">🔍+</button>
+  <button title="Zoom Out" onclick="zoomEditor(0.9)">🔍−</button>
+  <button title="Reset Zoom" onclick="zoomEditor(1, true)">🔍 Reset</button>
+
+  <button title="Select All (Ctrl+A)" onclick="selectAllText()">Select All</button>
+
+  <button title="Print Document" onclick="printContent()">🖨️ Print</button>
+
+  <button title="Toggle Dark/Light Mode" onclick="toggleDarkLight()">🌙/☀️</button>
+</div>
+
+<div id="editor-container">
+  <div id="editor" contenteditable="true" spellcheck="true" aria-label="Document editor" role="textbox"></div>
+</div>
+
+<div id="statusbar">
+  <div id="wordCount">Words: 0</div>
+  <div id="charCount">Characters: 0</div>
+</div>
+
+<div id="findReplaceContainer" role="dialog" aria-modal="true" aria-labelledby="findReplaceLabel">
+  <div id="findReplaceLabel" style="font-weight:bold; margin-bottom: 6px;">Find and Replace</div>
+  <input type="text" id="findInput" placeholder="Find..." />
+  <input type="text" id="replaceInput" placeholder="Replace with..." />
+  <button onclick="findText()">Find</button>
+  <button onclick="replaceText()">Replace</button>
+  <button onclick="replaceAllText()">Replace All</button>
+  <button onclick="toggleFindReplace()">Close</button>
+  <div id="findResult" style="margin-top:6px; font-size:13px; color:#0f0;"></div>
+</div>
+
+<script>
+  // Elements
+  const editor = document.getElementById('editor');
+  const wordCountEl = document.getElementById('wordCount');
+  const charCountEl = document.getElementById('charCount');
+  const findReplaceContainer = document.getElementById('findReplaceContainer');
+  const findInput = document.getElementById('findInput');
+  const replaceInput = document.getElementById('replaceInput');
+  const findResult = document.getElementById('findResult');
+
+  // Execute command wrapper
+  function execCmd(command, value = null) {
+    document.execCommand(command, false, value);
+    editor.focus();
+    updateCounts();
+  }
+
+  // Clipboard functions (simple)
+  function copyText() {
+    document.execCommand('copy');
+  }
+  function pasteText() {
+    document.execCommand('paste');
+  }
+
+  // Insert link prompt
+  function insertLink() {
+    const url = prompt('Enter URL:', 'https://');
+    if (url) {
+      execCmd('createLink', url);
+    }
+  }
+
+  // Insert image upload & embed
+  function insertImage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        execCmd('insertImage', evt.target.result);
+      }
+      reader.readAsDataURL(file);
+    }
+    input.click();
+  }
+
+  // Clear formatting
+  function clearFormatting() {
+    execCmd('removeFormat');
+    // Also remove links in selection
+    const selection = window.getSelection();
+    if(selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      let container = range.commonAncestorContainer;
+      if(container.nodeType === 3) container = container.parentNode;
+      if(container.tagName === 'A') {
+        execCmd('unlink');
+      }
+    }
+  }
+
+  // Insert current date and time
+  function insertDateTime() {
+    const now = new Date();
+    execCmd('insertText', now.toLocaleString());
+  }
+
+  // Find and Replace functionality
+  function toggleFindReplace() {
+    if(findReplaceContainer.style.display === 'block') {
+      findReplaceContainer.style.display = 'none';
+      clearHighlights();
+      editor.focus();
+    } else {
+      findReplaceContainer.style.display = 'block';
+      findInput.value = '';
+      replaceInput.value = '';
+      findResult.textContent = '';
+      findInput.focus();
+    }
+  }
+  function clearHighlights() {
+    const marks = editor.querySelectorAll('mark');
+    marks.forEach(m => {
+      const parent = m.parentNode;
+      while(m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+    });
+  }
+  function findText() {
+    clearHighlights();
+    let query = findInput.value.trim();
+    if(!query) {
+      findResult.textContent = "Enter text to find.";
+      return;
+    }
+    let innerHTML = editor.innerHTML;
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    let matches = innerHTML.match(regex);
+    if(!matches) {
+      findResult.textContent = "No matches found.";
+      return;
+    }
+    innerHTML = innerHTML.replace(regex, match => `<mark style="background: lime; color: black;">${match}</mark>`);
+    editor.innerHTML = innerHTML;
+    findResult.textContent = matches.length + " match(es) found.";
+  }
+  function replaceText() {
+    let query = findInput.value.trim();
+    let replacement = replaceInput.value;
+    if(!query) {
+      findResult.textContent = "Enter text to find.";
+      return;
+    }
+    if(!editor.innerHTML.includes('<mark')) {
+      findResult.textContent = "Please find text first.";
+      return;
+    }
+    // Replace first match
+    const mark = editor.querySelector('mark');
+    if(mark) {
+      mark.outerHTML = replacement;
+      findResult.textContent = "One occurrence replaced.";
+    }
+  }
+  function replaceAllText() {
+    let query = findInput.value.trim();
+    let replacement = replaceInput.value;
+    if(!query) {
+      findResult.textContent = "Enter text to find.";
+      return;
+    }
+    let innerHTML = editor.innerHTML;
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    let matches = innerHTML.match(regex);
+    if(!matches) {
+      findResult.textContent = "No matches found.";
+      return;
+    }
+    innerHTML = innerHTML.replace(regex, replacement);
+    editor.innerHTML = innerHTML;
+    findResult.textContent = matches.length + " occurrences replaced.";
+  }
+
+  // Update word and character counts
+  function updateCounts() {
+    const text = editor.innerText || "";
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    wordCountEl.textContent = "Words: " + words.length;
+    charCountEl.textContent = "Characters: " + text.replace(/\s/g, '').length;
+  }
+  editor.addEventListener('input', updateCounts);
+  window.addEventListener('load', updateCounts);
+
+  // Toggle Spellcheck
+  function toggleSpellcheck() {
+    editor.spellcheck = !editor.spellcheck;
+    editor.focus();
+  }
+
+  // Zoom Editor
+  function zoomEditor(factor, reset=false) {
+    let currentSize = parseFloat(window.getComputedStyle(editor).fontSize);
+    if(reset) {
+      editor.style.fontSize = '12pt';
+    } else {
+      editor.style.fontSize = (currentSize * factor) + 'px';
+    }
+    editor.focus();
+  }
+
+  // Select all text
+  function selectAllText() {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    editor.focus();
+  }
+
+  // Toggle Dark/Light Mode
+  function toggleDarkLight() {
+    document.body.classList.toggle('dark');
+    document.body.classList.toggle('light');
+  }
+
+  // Print only editor content
+  function printContent() {
+    window.print();
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>its.type — Fixed UI & Modes</title>
+  <style>
+    :root{--bg:#0f1220;--panel:#121425;--muted:#9aa3bf;--text:#e6e9ff;--accent:#ffd166;--ok:#7fffb0;--bad:#ff7b7b}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial;background:var(--bg);color:var(--text)}
+
+    /* fixed top toolbar */
+    .toolbar{position:fixed;left:0;right:0;top:0;height:68px;display:flex;align-items:center;justify-content:center;z-index:50;background:linear-gradient(180deg, rgba(11,14,26,0.98), rgba(11,14,26,0.85));backdrop-filter:blur(2px);border-bottom:1px solid rgba(255,255,255,0.03)}
+    .toolbar-inner{width:1100px;max-width:calc(100% - 32px);display:flex;align-items:center;gap:10px}
+    .brand{font-weight:700;margin-right:8px}
+    select,button{background:var(--panel);color:var(--text);border:1px solid rgba(255,255,255,0.03);padding:8px 10px;border-radius:8px;font-size:14px}
+    button.primary{background:linear-gradient(90deg,var(--accent),#ffb703);color:#0b0b10;border:none}
+    .left-controls{display:flex;gap:8px;align-items:center}
+    .right-controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+    /* page content pushed below toolbar */
+    .page{padding-top:88px;display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 88px)}
+    .panel{width:1100px;max-width:calc(100% - 32px);background:linear-gradient(180deg,var(--panel),#0e1120);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.03)}
+
+    .typing-area{min-height:220px;padding:20px;border-radius:10px;background:rgba(255,255,255,0.02);overflow:auto;font-size:18px;line-height:1.9;white-space:pre-wrap}
+    .c{opacity:0.95}
+    .c.ok{color:var(--ok)}
+    .c.bad{color:var(--bad);text-decoration:line-through}
+    .caret{display:inline-block;width:2px;height:1.2em;background:var(--accent);vertical-align:-.18em;animation:blink 1s steps(2,end) infinite}
+    @keyframes blink{50%{opacity:.2}}
+
+    .stats{display:flex;gap:14px;margin-top:12px;align-items:center}
+    .stat{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:8px;font-weight:700}
+
+    /* small responsive tweaks */
+    @media (max-width:760px){
+      .toolbar-inner{flex-wrap:wrap;justify-content:center}
+      select,button{font-size:13px;padding:7px 8px}
+      .typing-area{font-size:16px}
+    }
+
+    /* keep hidden input visible for mobile keyboard (opacity 0) */
+    #hiddenInput{position:fixed;left:12px;top:76px;opacity:0;width:20px;height:20px;border:0}
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <div class="left-controls">
+        <div class="brand">taskly-SPEED.INHAN..</div>
+        <label><select id="modeSelect" title="Choose mode">
+          <option value="paragraph">Paragraph</option>
+          <option value="time">Time Attack</option>
+          <option value="words">Words Attack</option>
+          <option value="endless">Endless</option>
+          <option value="code">Code Practice</option>
+        </select></label>
+
+        <label id="timeOpts" style="display:none"><select id="timeSelect" title="Duration">
+          <option value="30">30s</option>
+          <option value="60" selected>60s</option>
+          <option value="120">120s</option>
+        </select></label>
+
+        <label id="wordsOpts" style="display:none"><select id="wordsSelect" title="Words target">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+        </select></label>
+
+        <label id="langWrap" style="display:none"><select id="langSelect" title="Code language">
+          <option value="none">Pick language</option>
+          <option value="python">Python</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+          <option value="js">JavaScript</option>
+          <option value="node">Node.js</option>
+          <option value="c">C</option>
+          <option value="cpp">C++</option>
+          <option value="java">Java</option>
+        </select></label>
+
+        <button id="startBtn" class="primary">Start</button>
+        <button id="endBtn">End</button>
+      </div>
+
+      <div class="right-controls">
+        <div class="stat">Stage: <span id="stage">1</span></div>
+        <div class="stat">WPM: <span id="wpm">0</span></div>
+        <div class="stat">Acc: <span id="acc">100</span>%</div>
+        <div class="stat">Time: <span id="time">0</span>s</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="panel">
+      <div id="typingArea" class="typing-area" tabindex="0" aria-label="Typing area">Click Start to load content...</div>
+      <input id="hiddenInput" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <div class="stats"></div>
+    </div>
+  </div>
+
+<script>
+// --- STATE ---
+const modeSelect = document.getElementById('modeSelect');
+const timeSelect = document.getElementById('timeSelect');
+const wordsSelect = document.getElementById('wordsSelect');
+const langSelect = document.getElementById('langSelect');
+const timeOpts = document.getElementById('timeOpts');
+const wordsOpts = document.getElementById('wordsOpts');
+const langWrap = document.getElementById('langWrap');
+const startBtn = document.getElementById('startBtn');
+const endBtn = document.getElementById('endBtn');
+const typingArea = document.getElementById('typingArea');
+const hiddenInput = document.getElementById('hiddenInput');
+const stageEl = document.getElementById('stage');
+const wpmEl = document.getElementById('wpm');
+const accEl = document.getElementById('acc');
+const timeEl = document.getElementById('time');
+
+let active = false;
+let stage = 1;
+let text = '';
+let pos = 0; // char index
+let correct = 0, typed = 0;
+let startTs = 0, timerId = null;
+let targetWords = 50; let timeLimit = 60; // defaults
+
+// --- BANKS ---
+const WORD_BANK = "typing practice improves accuracy speed keyboard mastery paragraph stage challenge flow focus skill routine consistent learning growth advanced lesson improvement".split(' ');
+const CODE_SNIPPETS = {
+  python:["for i in range(5):\n    print(i)","def add(a,b):\n    return a + b"],
+  html:["<div>\n  <p>Hello world</p>\n</div>"],
+  css:["body{\n  background:#111;\n  color:#fff;\n}\n"],
+  js:["function greet(name){\n  console.log('Hi ' + name);\n}\n"],
+  node:["const http = require('http');\n"],
+  c:["#include <stdio.h>\nint main(){\n  printf(\"Hi\\n\");\n  return 0;\n}\n"],
+  cpp:["#include <iostream>\nusing namespace std;\nint main(){ cout<<\"Hi\"<<endl; return 0; }"],
+  java:["class Main{\n  public static void main(String[]a){\n    System.out.println(\"Hi\");\n  }\n}\n"]
+};
+
+// --- UI helpers ---
+function showControlsForMode(mode){
+  timeOpts.style.display = 'none'; wordsOpts.style.display = 'none'; langWrap.style.display = 'none';
+  if(mode === 'time') timeOpts.style.display = '';
+  if(mode === 'words') wordsOpts.style.display = '';
+  if(mode === 'code') langWrap.style.display = '';
+}
+
+modeSelect.addEventListener('change', ()=>{
+  showControlsForMode(modeSelect.value);
+});
+
+// --- generation ---
+function generateParagraph(lenWords=50){
+  let out = [];
+  for(let i=0;i<lenWords;i++) out.push(WORD_BANK[Math.floor(Math.random()*WORD_BANK.length)]);
+  return out.join(' ') + '.';
+}
+function getCodeSnippet(lang){
+  if(!lang || lang==='none'){
+    // pick random lang
+    const keys = Object.keys(CODE_SNIPPETS);
+    lang = keys[Math.floor(Math.random()*keys.length)];
+  }
+  const list = CODE_SNIPPETS[lang] || ['// example code'];
+  return list[Math.floor(Math.random()*list.length)];
+}
+
+// --- render ---
+function renderText(s){
+  text = s;
+  pos = 0; typingArea.innerHTML = '';
+  for(let i=0;i<text.length;i++){
+    const sp = document.createElement('span'); sp.className='c'; sp.id = 'c'+i; sp.textContent = text[i]; typingArea.appendChild(sp);
+  }
+  placeCaret();
+}
+function placeCaret(){
+  // remove old caret
+  const old = document.querySelector('.caret'); if(old) old.remove();
+  const el = document.getElementById('c'+pos);
+  const caret = document.createElement('span'); caret.className='caret';
+  if(el) el.before(caret);
+  else typingArea.appendChild(caret);
+  // scroll into view
+  const r = caret.getBoundingClientRect(); const br = typingArea.getBoundingClientRect();
+  if(r.bottom > br.bottom) typingArea.scrollTop += r.bottom - br.bottom + 16;
+  if(r.top < br.top) typingArea.scrollTop -= (br.top - r.top) + 16;
+}
+
+// --- session control ---
+function startSession(){
+  if(active) return; active = true; startTs = 0; correct = 0; typed = 0; pos = 0; stage = 1; updateStats();
+  // choose initial text based on mode
+  const mode = modeSelect.value;
+  if(mode === 'paragraph' || mode === 'endless') renderText(generateParagraph(50));
+  else if(mode === 'time') { timeLimit = Number(timeSelect.value); renderText(generateParagraph(45)); }
+  else if(mode === 'words') { targetWords = Number(wordsSelect.value); renderText(generateParagraph(targetWords)); }
+  else if(mode === 'code') { const lang = langSelect.value; renderText(getCodeSnippet(lang)); }
+
+  // disable controls while active
+  modeSelect.disabled = true; timeSelect.disabled = true; wordsSelect.disabled = true; langSelect.disabled = true; startBtn.disabled = true;
+  hiddenInput.focus();
+  // start timer handling
+  if(timerId) clearInterval(timerId); startTs = Date.now(); timerId = setInterval(()=>{
+    const secs = Math.floor((Date.now()-startTs)/1000);
+    timeEl.textContent = secs;
+    updateStats();
+    if(mode === 'time' && secs >= timeLimit){ endSession(); }
+  },250);
+}
+
+function endSession(){
+  if(!active) return; active = false; clearInterval(timerId); timerId=null;
+  // enable controls
+  modeSelect.disabled = false; timeSelect.disabled = false; wordsSelect.disabled = false; langSelect.disabled = false; startBtn.disabled = false;
+  alert(`Session ended. WPM: ${wpmEl.textContent}, Accuracy: ${accEl.textContent}%`);
+}
+
+function updateStats(){
+  const secs = Math.max(1, Math.floor((Date.now()-startTs)/1000));
+  const mins = Math.max(1/60, secs/60);
+  const wpm = Math.round((correct/5)/mins);
+  wpmEl.textContent = isFinite(wpm)? wpm:0;
+  const acc = typed? Math.round((correct/typed)*100):100;
+  accEl.textContent = acc;
+  stageEl.textContent = stage;
+}
+
+// --- typing handlers ---
+function typeChar(ch){
+  if(!active) return;
+  const expected = text[pos] || '';
+  const span = document.getElementById('c'+pos);
+  typed++;
+  if(ch === expected){ if(span) span.classList.add('ok'); correct++; }
+  else { if(span) span.classList.add('bad'); }
+  if(span) span.classList.remove('active');
+  pos++;
+  // move caret
+  placeCaret();
+  updateStats();
+  // if finished snippet
+  if(pos >= text.length){
+    stage++;
+    // load next depending on mode
+    const mode = modeSelect.value;
+    if(mode === 'paragraph' || mode === 'endless') renderText(generateParagraph(50 + Math.floor(stage/5)*5));
+    else if(mode === 'time') renderText(generateParagraph(45 + Math.floor(stage/5)*5));
+    else if(mode === 'words') renderText(generateParagraph(targetWords));
+    else if(mode === 'code') renderText(getCodeSnippet(langSelect.value));
+  }
+}
+
+function handleBackspace(){
+  if(!active) return;
+  if(pos===0) return;
+  pos--;
+  const span = document.getElementById('c'+pos);
+  if(span){ span.classList.remove('ok','bad'); }
+  // adjust stats conservatively (we'll reduce typed and correct if we remove a typed char)
+  // Note: this simple approach reduces typed by 1; if it was correct, reduce correct
+  typed = Math.max(0, typed-1);
+  // can't know if removed char was correct easily here without tracking, so we won't adjust correct for simplicity
+  placeCaret(); updateStats();
+}
+
+// capture keyboard reliably for desktop + mobile
+document.addEventListener('keydown',(e)=>{
+  if(!active) return;
+  if(e.key === 'Backspace'){ e.preventDefault(); handleBackspace(); return; }
+  if(e.key === 'Tab' || e.key==='Alt' || e.key==='Control' || e.key==='Meta') return; // ignore
+  if(e.key.length === 1){ e.preventDefault(); typeChar(e.key); }
+  else if(e.key === 'Enter'){ e.preventDefault(); typeChar('\n'); }
+  else if(e.code === 'Space'){ e.preventDefault(); typeChar(' '); }
+});
+
+// also support hidden input (mobile soft keyboards)
+hiddenInput.addEventListener('input',(e)=>{
+  if(!active) return;
+  const v = e.target.value;
+  if(!v) return;
+  for(const ch of v){ typeChar(ch); }
+  e.target.value = '';
+});
+
+// focus management
+typingArea.addEventListener('click',()=>{ hiddenInput.focus(); });
+hiddenInput.addEventListener('focus',()=>{ if(!active) hiddenInput.blur(); });
+
+// start/end events
+startBtn.addEventListener('click', startSession);
+endBtn.addEventListener('click', endSession);
+
+// init UI
+showControlsForMode(modeSelect.value);
+modeSelect.value='paragraph';
+</script>
+</body>
+</html>
